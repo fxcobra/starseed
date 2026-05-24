@@ -24,6 +24,7 @@ import {
   sendVendorVideo,
   sendVendorMessage,
   sendVendorBroadcast,
+  setGroupLockBulk,
   setGroupLock,
   startVendorRuntime,
   updateVendorConfig,
@@ -492,8 +493,22 @@ app.post("/vendors/:vendorId/broadcast", async (req, res) => {
   const vendorId = req.params.vendorId;
   const recipients = Array.isArray(req.body?.recipients) ? (req.body.recipients as unknown[]) : [];
   const text = typeof req.body?.text === "string" ? req.body.text : "";
-  const delayMsRaw = typeof req.body?.delay_ms === "number" ? req.body.delay_ms : typeof req.body?.delayMs === "number" ? req.body.delayMs : 250;
-  const delayMs = Number.isFinite(delayMsRaw) ? Math.max(0, Math.min(2000, delayMsRaw)) : 250;
+  const delaySecondsRaw =
+    typeof req.body?.delay_seconds === "number"
+      ? req.body.delay_seconds
+      : typeof req.body?.delaySeconds === "number"
+        ? req.body.delaySeconds
+        : 0;
+  const delaySeconds = Number.isFinite(delaySecondsRaw) ? Math.max(0, Math.min(600, delaySecondsRaw)) : 0;
+  const mentionAll = req.body?.mention_all === true || req.body?.mentionAll === true ? true : false;
+
+  const productCards =
+    (req.body?.productCards && typeof req.body.productCards === "object"
+      ? req.body.productCards
+      : req.body?.product_cards && typeof req.body.product_cards === "object"
+        ? req.body.product_cards
+        : undefined) ?? undefined;
+  const buttons = Array.isArray(req.body?.buttons) ? req.body.buttons : undefined;
 
   const list = recipients.filter((x) => typeof x === "string").map((x) => (x as string).trim()).filter((x) => x !== "");
   if (!list.length || !text.trim()) {
@@ -510,7 +525,7 @@ app.post("/vendors/:vendorId/broadcast", async (req, res) => {
   }
 
   try {
-    const resp = await sendVendorBroadcast(vendorId, list, text, delayMs);
+    const resp = await sendVendorBroadcast(vendorId, list, { text, delaySeconds, mentionAll, productCards, buttons });
     if (!resp.ok) {
       res.status(503).json(resp);
       return;
@@ -518,6 +533,47 @@ app.post("/vendors/:vendorId/broadcast", async (req, res) => {
     res.json(resp);
   } catch (e: unknown) {
     res.status(503).json({ message: e instanceof Error ? e.message : "Broadcast failed." });
+  }
+});
+
+app.post("/vendors/:vendorId/groups/lock-bulk", async (req, res) => {
+  const vendorId = req.params.vendorId;
+  const targets = Array.isArray(req.body?.targets) ? (req.body.targets as unknown[]) : [];
+  const locked = typeof req.body?.locked === "boolean" ? req.body.locked : null;
+  const delaySecondsRaw =
+    typeof req.body?.delay_seconds === "number"
+      ? req.body.delay_seconds
+      : typeof req.body?.delaySeconds === "number"
+        ? req.body.delaySeconds
+        : 0;
+  const delaySeconds = Number.isFinite(delaySecondsRaw) ? Math.max(0, Math.min(600, delaySecondsRaw)) : 0;
+  const unlockAfterSecondsRaw =
+    typeof req.body?.unlock_after_seconds === "number"
+      ? req.body.unlock_after_seconds
+      : typeof req.body?.unlockAfterSeconds === "number"
+        ? req.body.unlockAfterSeconds
+        : 0;
+  const unlockAfterSeconds = Number.isFinite(unlockAfterSecondsRaw) ? Math.max(0, Math.min(3600, unlockAfterSecondsRaw)) : 0;
+
+  const list = targets.filter((x) => typeof x === "string").map((x) => (x as string).trim()).filter((x) => x !== "");
+  if (!list.length || locked === null) {
+    res.status(422).json({ message: "targets and locked are required." });
+    return;
+  }
+  if (list.length > 240) {
+    res.status(422).json({ message: "max 240 targets." });
+    return;
+  }
+
+  try {
+    const resp = await setGroupLockBulk(vendorId, list, locked, delaySeconds, unlockAfterSeconds);
+    if (!resp.ok) {
+      res.status(503).json(resp);
+      return;
+    }
+    res.json(resp);
+  } catch (e: unknown) {
+    res.status(503).json({ message: e instanceof Error ? e.message : "Group lock bulk failed." });
   }
 });
 
@@ -597,6 +653,13 @@ app.post("/vendors/:vendorId/drops", async (req, res) => {
         ? req.body.unlock_after_seconds
         : null;
   const unlockAfterSeconds = unlockAfterSecondsRaw !== null && Number.isFinite(unlockAfterSecondsRaw) ? unlockAfterSecondsRaw : 0;
+  const delaySecondsRaw =
+    typeof req.body?.delaySeconds === "number"
+      ? req.body.delaySeconds
+      : typeof req.body?.delay_seconds === "number"
+        ? req.body.delay_seconds
+        : 0;
+  const delaySeconds = Number.isFinite(delaySecondsRaw) ? Math.max(0, Math.min(600, delaySecondsRaw)) : 0;
   const mediaUrls = Array.isArray(req.body?.media_urls)
     ? (req.body.media_urls.filter((x: unknown) => typeof x === "string") as string[])
     : [];
@@ -625,6 +688,7 @@ app.post("/vendors/:vendorId/drops", async (req, res) => {
       text,
       lockBefore,
       unlockAfterSeconds,
+      delaySeconds,
       mediaUrl,
       mediaUrls,
       mentionAll,

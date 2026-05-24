@@ -821,6 +821,7 @@ export async function startVendorRuntime(vendorId) {
             runtime.baileysSendGroupImage = br.sendGroupImage;
             runtime.baileysSendGroupProductImages = br.sendGroupProductImages;
             runtime.baileysSendGroupCtaCard = br.sendGroupCtaCard;
+            runtime.baileysSendGroupCtaLinks = br.sendGroupCtaLinks;
             runtime.baileysSendStatusText = br.sendStatusText;
             runtime.baileysSendStatusImage = br.sendStatusImage;
             runtime.baileysSendStatusVideo = br.sendStatusVideo;
@@ -1085,33 +1086,122 @@ export async function sendVendorVideo(vendorId, to, videoUrl, caption) {
         return { ok: true };
     });
 }
-export async function sendVendorBroadcast(vendorId, recipients, text, delayMs) {
-    const runtime = await startVendorRuntime(vendorId);
-    if (!runtime.baileysSend)
-        throw new Error("WhatsApp runtime not ready.");
-    const list = Array.isArray(recipients) ? recipients.map((x) => x.trim()).filter((x) => x !== "") : [];
-    const msg = typeof text === "string" ? text : "";
-    const delay = typeof delayMs === "number" && Number.isFinite(delayMs) ? Math.max(0, Math.min(2000, delayMs)) : 250;
-    const results = [];
-    for (const to of list) {
-        let ok = true;
-        let err = undefined;
-        try {
-            await runtime.baileysSend(to, msg);
+export async function sendVendorBroadcast(vendorId, recipients, payload) {
+    return await enqueueSend(vendorId, async () => {
+        const runtime = await startVendorRuntime(vendorId);
+        const list = Array.isArray(recipients) ? recipients.map((x) => x.trim()).filter((x) => x !== "") : [];
+        const mentionAll = payload.mentionAll === true;
+        const baseMsg = typeof payload.text === "string" ? payload.text : "";
+        const msg = mentionAll ? `@all\n\n${baseMsg}` : baseMsg;
+        if (!msg.trim())
+            return { ok: false, sent: 0, failed: 0, results: [] };
+        const delaySecondsRaw = typeof payload.delaySeconds === "number" && Number.isFinite(payload.delaySeconds) ? payload.delaySeconds : 0;
+        const delay = Math.max(0, Math.min(600_000, Math.floor(delaySecondsRaw * 1000)));
+        const productCardsRaw = payload.productCards && typeof payload.productCards === "object" ? payload.productCards : null;
+        const cardsRaw = Array.isArray(productCardsRaw?.cards) ? productCardsRaw?.cards : [];
+        const cards = cardsRaw
+            .filter((c) => c && typeof c === "object")
+            .map((c) => c)
+            .map((c) => ({
+            image_url: typeof c.image_url === "string" ? c.image_url.trim() : "",
+            body: typeof c.body === "string"
+                ? c.body.trim()
+                : (typeof c.title === "string" ? c.title.trim() : ""),
+            footer: typeof c.footer === "string" ? c.footer.trim() : "",
+            url: typeof c.url === "string"
+                ? c.url.trim()
+                : (typeof c.link_url === "string" ? c.link_url.trim() : ""),
+            buttons: Array.isArray(c.buttons)
+                ? c.buttons
+                    .filter((b) => b && typeof b === "object")
+                    .map((b) => b)
+                    .map((b) => ({
+                    text: typeof b.text === "string" ? b.text.trim() : "",
+                    url: typeof b.url === "string" ? b.url.trim() : "",
+                }))
+                    .filter((b) => b.text && b.url)
+                    .slice(0, 24)
+                : [],
+        }))
+            .filter((c) => c.image_url && c.body)
+            .slice(0, 10);
+        const bodyText = typeof productCardsRaw?.body_text === "string" ? String(productCardsRaw.body_text).trim() : "";
+        const footerText = typeof productCardsRaw?.footer_text === "string" ? String(productCardsRaw.footer_text).trim() : "";
+        const fallbackText = typeof productCardsRaw?.fallback_text === "string" ? String(productCardsRaw.fallback_text).trim() : "";
+        const buttonText = typeof productCardsRaw?.button_text === "string" ? String(productCardsRaw.button_text).trim() : "";
+        const hasCards = cards.length > 0;
+        const buttonsRaw = Array.isArray(payload.buttons) ? payload.buttons : [];
+        const buttons = buttonsRaw
+            .filter((b) => b && typeof b === "object")
+            .map((b) => b)
+            .map((b) => ({
+            text: typeof b.text === "string" ? b.text.trim() : "",
+            url: typeof b.url === "string" ? b.url.trim() : "",
+        }))
+            .filter((b) => b.text && b.url)
+            .slice(0, 30);
+        const chunk3 = (arr) => {
+            const out = [];
+            for (let i = 0; i < arr.length; i += 3)
+                out.push(arr.slice(i, i + 3));
+            return out;
+        };
+        const results = [];
+        for (const to of list) {
+            let ok = true;
+            let err = undefined;
+            try {
+                const isGroup = to.endsWith("@g.us");
+                const linkChunks = buttons.length ? chunk3(buttons) : [];
+                if (isGroup && linkChunks.length && runtime.baileysSendGroupCtaLinks) {
+                    await runtime.baileysSendGroupCtaLinks(to, msg, "", linkChunks[0]);
+                    await pushOutbound(runtime, to, msg);
+                    if (linkChunks.length > 1) {
+                        for (let i = 1; i < linkChunks.length; i++) {
+                            await runtime.baileysSendGroupCtaLinks(to, "More links", "", linkChunks[i]);
+                            await new Promise((r) => setTimeout(r, 150));
+                        }
+                    }
+                }
+                else if (runtime.baileysSend) {
+                    await runtime.baileysSend(to, msg);
+                    await pushOutbound(runtime, to, msg);
+                }
+                else {
+                    throw new Error("WhatsApp runtime not ready.");
+                }
+                if (hasCards && isGroup && runtime.baileysSendGroupProductImages) {
+                    await runtime.baileysSendGroupProductImages(to, "", "", cards, buttonText || undefined);
+                    if (fallbackText && fallbackText !== msg) {
+                        await pushOutbound(runtime, to, fallbackText);
+                    }
+                }
+                else if (hasCards && runtime.baileysSend) {
+                    await runtime.baileysSend(to, fallbackText || msg);
+                    if (fallbackText && fallbackText !== msg) {
+                        await pushOutbound(runtime, to, fallbackText);
+                    }
+                }
+            }
+            catch (e) {
+                ok = false;
+                err = e instanceof Error ? e.message : "Send failed.";
+                emit(runtime, { type: "error", message: err });
+                try {
+                    await pushOutbound(runtime, to, hasCards ? (fallbackText || msg) : msg);
+                }
+                catch {
+                    void 0;
+                }
+            }
+            results.push({ to, ok, error: err });
+            if (delay > 0)
+                await new Promise((r) => setTimeout(r, delay));
         }
-        catch (e) {
-            ok = false;
-            err = e instanceof Error ? e.message : "Send failed.";
-            emit(runtime, { type: "error", message: err });
-        }
-        await pushOutbound(runtime, to, msg);
-        results.push({ to, ok, error: err });
-        if (delay > 0)
-            await new Promise((r) => setTimeout(r, delay));
-    }
-    const sent = results.filter((r) => r.ok).length;
-    const failed = results.length - sent;
-    return { ok: failed === 0, sent, failed, results };
+        const sent = results.filter((r) => r.ok).length;
+        const failed = results.length - sent;
+        return { ok: failed === 0, sent, failed, results };
+    });
 }
 export async function listVendorMessages(vendorId) {
     const runtime = await startVendorRuntime(vendorId);
@@ -1176,6 +1266,41 @@ export async function setGroupLock(vendorId, name, locked) {
     runtime.groups.set(key, { name: display, locked, participantsCount: prev?.participantsCount ?? 0 });
     emit(runtime, { type: "group_locked", name: display, locked, at: new Date().toISOString() });
     return { ok: true };
+}
+export async function setGroupLockBulk(vendorId, targets, locked, delaySeconds, unlockAfterSeconds) {
+    return await enqueueSend(vendorId, async () => {
+        const runtime = await startVendorRuntime(vendorId);
+        const list = Array.isArray(targets) ? targets.map((x) => String(x).trim()).filter((x) => x.endsWith("@g.us")) : [];
+        const delaySecondsRaw = typeof delaySeconds === "number" && Number.isFinite(delaySeconds) ? delaySeconds : 0;
+        const delay = Math.max(0, Math.min(600_000, Math.floor(delaySecondsRaw * 1000)));
+        const unlockAfter = typeof unlockAfterSeconds === "number" && Number.isFinite(unlockAfterSeconds)
+            ? Math.max(0, Math.min(60 * 60, Math.floor(unlockAfterSeconds)))
+            : 0;
+        const results = [];
+        for (const id of list) {
+            let ok = true;
+            let err = undefined;
+            try {
+                await setGroupLock(vendorId, id, locked);
+                if (locked && unlockAfter > 0) {
+                    const handle = setTimeout(() => {
+                        void setGroupLock(vendorId, id, false);
+                    }, unlockAfter * 1000);
+                    runtime.unlockTimers.push(handle);
+                }
+            }
+            catch (e) {
+                ok = false;
+                err = e instanceof Error ? e.message : "Group lock failed.";
+            }
+            results.push({ to: id, ok, error: err });
+            if (delay > 0)
+                await new Promise((r) => setTimeout(r, delay));
+        }
+        const sent = results.filter((r) => r.ok).length;
+        const failed = results.length - sent;
+        return { ok: failed === 0, sent, failed, results };
+    });
 }
 export async function dropGroup(vendorId, name) {
     const runtime = await startVendorRuntime(vendorId);
@@ -1300,6 +1425,8 @@ export async function postDrop(vendorId, payload) {
             const unlockAfterSeconds = typeof payload.unlockAfterSeconds === "number" && Number.isFinite(payload.unlockAfterSeconds)
                 ? Math.max(0, Math.min(60 * 60, Math.floor(payload.unlockAfterSeconds)))
                 : 0;
+            const delaySecondsRaw = typeof payload.delaySeconds === "number" && Number.isFinite(payload.delaySeconds) ? payload.delaySeconds : 0;
+            const delay = Math.max(0, Math.min(600_000, Math.floor(delaySecondsRaw * 1000)));
             const groupErrors = [];
             let groupPosted = 0;
             const forwardToStatus = typeof buttonText === "string" && /forward\s*to\s*status/i.test(buttonText);
@@ -1432,6 +1559,8 @@ export async function postDrop(vendorId, payload) {
                     }, unlockAfterSeconds * 1000);
                     runtime.unlockTimers.push(handle);
                 }
+                if (delay > 0)
+                    await new Promise((r) => setTimeout(r, delay));
             }
             if (groupErrors.length) {
                 return {

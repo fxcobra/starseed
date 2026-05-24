@@ -1,90 +1,15 @@
 {
   "v": 1,
-  "savedAt": 1779385736366,
+  "savedAt": 1779575865389,
   "sessions": {
     "120363159552753674@newsletter": {
-      "lastAt": 1779385735164,
+      "lastAt": 1779575864182,
       "state": "chat",
       "greetedAt": 0,
       "lastNudgeAt": 0,
       "lastNudgeSig": "",
-      "aiFallbackAt": 1779300631150,
+      "aiFallbackAt": 1779564993874,
       "history": [
-        {
-          "dir": "out",
-          "text": "Hello! It seems you're mentioning Sevilla. How can I assist you today? Are you looking for specific products or services?",
-          "at": 1779028690493
-        },
-        {
-          "dir": "in",
-          "text": "📋 Our starting XI!\n✅ ¡Nuestro XI inicial!\n🆚 Sevilla",
-          "at": 1779031843069
-        },
-        {
-          "dir": "out",
-          "text": "It looks like you're sharing information about a starting lineup for a match against Sevilla. How can I assist you today? Are you interested in any products or services related to this event?",
-          "at": 1779031848492
-        },
-        {
-          "dir": "in",
-          "text": "📋 Our starting XI!\n✅ ¡Nuestro XI inicial!\n🆚 Sevilla",
-          "at": 1779032519387
-        },
-        {
-          "dir": "out",
-          "text": "It seems you're sharing details about a starting lineup for a match against Sevilla. How can I assist you today? Are you looking for any specific products or services related to this?",
-          "at": 1779032523471
-        },
-        {
-          "dir": "in",
-          "text": "🫡 Reporting for duty!\n🚶‍➡️ ¡Ya estamos aquí!",
-          "at": 1779033862993
-        },
-        {
-          "dir": "out",
-          "text": "Great to see your enthusiasm! How can I assist you today? Are you looking for specific products or services?",
-          "at": 1779033866819
-        },
-        {
-          "dir": "in",
-          "text": "🫡 Reporting for duty!\n🚶‍➡️ ¡Ya estamos aquí!",
-          "at": 1779035265047
-        },
-        {
-          "dir": "out",
-          "text": "Awesome! Ready to assist you. What can I help you with today? Are you looking for specific products or services?",
-          "at": 1779035270991
-        },
-        {
-          "dir": "in",
-          "text": "💯 Camavinga 💯\n100 wins in LaLiga with Real Madrid\n100 triunfos en Liga con el Real Madrid",
-          "at": 1779053358444
-        },
-        {
-          "dir": "in",
-          "text": "💯 Camavinga 💯\n100 wins in LaLiga with Real Madrid\n100 triunfos en Liga con el Real Madrid",
-          "at": 1779058789775
-        },
-        {
-          "dir": "out",
-          "text": "That's impressive! Eduardo Camavinga has certainly made a mark with Real Madrid. How can I assist you today? Are you looking for any specific products or services related to football or Real Madrid?",
-          "at": 1779058794054
-        },
-        {
-          "dir": "in",
-          "text": "💯 camavinga 💯\n100 wins in LaLiga with Real Madrid\n100 triunfos en Liga con el Real Madrid",
-          "at": 1779060231556
-        },
-        {
-          "dir": "out",
-          "text": "Absolutely! Camavinga's achievement is remarkable. How can I assist you today? Are you looking for any specific products or services related to football or Real Madrid?",
-          "at": 1779060236123
-        },
-        {
-          "dir": "in",
-          "text": "💯 Camavinga 💯\n100 wins in LaLiga with Real Madrid\n100 triunfos en Liga con el Real Madrid",
-          "at": 1779063241590
-        },
         {
           "dir": "out",
           "text": "Camavinga's milestone is indeed noteworthy! How can I assist you today? Are you interested in any specific products or services related to football or Real Madrid?",
@@ -159,175 +84,621 @@
           "dir": "out",
           "text": "Dani Carvajal is truly a standout player! If you need any information or products related to him or Real Madrid, feel free to ask!",
           "at": 1779385735164
+        },
+        {
+          "dir": "in",
+          "text": "📋 Our starting XI!\n✅ ¡Nuestro XI inicial!\n🆚 Athletic Club",
+          "at": 1779561575992
+        },
+        {
+          "dir": "in",
+          "text": "🤍 HALA MADRID! 🤍",
+          "at": 1779563354566
+        },
+        {
+          "dir": "in",
+          "text": "🎯🔥⚽",
+          "at": 1779564984543
+        },
+        {
+          "dir": "in",
+          "text": "⏸️ HT: Real Madrid 2-1 Athletic Club\n⚽ 12' Gonzalo\n⚽ 41' Bellingham\n⚽ 45'+1' Guruzeta",
+          "at": 1779565852838
+        },
+        {
+          "dir": "out",
+          "text": "What a thrilling match! If you want to celebrate with some Real Madrid merchandise or have any questions, just let me know!",
+          "at": 1779565857559
+        },
+        {
+          "dir": "in",
+          "text": "🫲 🫱",
+          "at": 1779566291289
+        },
+        {
+          "dir": "out",
+          "text": "Looks like you're excited! If there's anything specific you want to discuss or explore, just let me know!",
+          "at": 1779566299420
+        },
+        {
+          "dir": "in",
+          "text": "🏁 FT: Real Madrid 4-2 Athletic Club\n⚽ 12' Gonzalo\n⚽ 41' Bellingham\n⚽ 45'+1' Guruzeta\n⚽ 51' Mbappé\n⚽ 89' Brahim\n⚽ 90'+1' Izeta",
+          "at": 1779570146660
+        },
+        {
+          "dir": "out",
+          "text": "What a fantastic victory for Real Madrid! 🎉 If you’d like to grab some merchandise to celebrate or need any information, just let me know!",
+          "at": 1779570154416
+        },
+        {
+          "dir": "in",
+          "text": "👉 Brahim 👈",
+          "at": 1779570280595
+        },
+        {
+          "dir": "out",
+          "text": "Brahim is definitely making waves! If you're looking for anything related to him or Real Madrid, just let me know!",
+          "at": 1779570284494
+        },
+        {
+          "dir": "in",
+          "text": "🤍 Don't miss any of the content from Carvajal and Alaba's farewell!\n🥹 ¡Disfruta de todo el contenido de la despedida de Carvajal y Alaba!\n🔗 https://play.realmadrid.com/playlist/35715?u=w",
+          "at": 1779573127888
+        },
+        {
+          "dir": "out",
+          "text": "That sounds like a special farewell! If you need any Real Madrid gear or have questions about products, feel free to ask!",
+          "at": 1779573133784
+        },
+        {
+          "dir": "in",
+          "text": "🎙️ Carvajal 🎙️\n📺 Full statements | Declaraciones completas ▶️ RM Play\n🔗 https://play.realmadrid.com/playlist/35715?u=w",
+          "at": 1779575858250
+        },
+        {
+          "dir": "out",
+          "text": "Carvajal's statements must be heartfelt! If you're interested in any merchandise or products related to him or Real Madrid, just let me know!",
+          "at": 1779575864182
         }
       ]
     },
     "271347544494286@lid": {
-      "lastAt": 1779385567706,
+      "lastAt": 1779565605783,
       "state": "chat",
       "email": "buzinezz1379@gmail.com",
       "momoNumber": "0551234987",
       "lastReference": "PSK_20260519191938_a5d71183",
-      "greetedAt": 1779382091032,
-      "lastNudgeAt": 1779383303211,
+      "greetedAt": 1779561334218,
+      "lastNudgeAt": 1779565598966,
       "lastNudgeSig": "greet_nudge",
-      "aiFallbackAt": 1778959708509,
+      "aiFallbackAt": 1779565564231,
       "deliveryAddress": "Kumasi Santasi",
       "history": [
         {
-          "dir": "out",
-          "text": "Could you please specify your preferred brand or budget range for the laptops? This will help me find the best options for you!",
-          "at": 1779380273870
+          "dir": "in",
+          "text": "High Performance Access Point \n300meters\n2700",
+          "at": 1779561554469
         },
         {
           "dir": "in",
-          "text": "I want the cheapest",
-          "at": 1779380282900
-        },
-        {
-          "dir": "out",
-          "text": "I can check my system to see the cheapest laptops available! Would you like me to pull up the options for you?",
-          "at": 1779380285240
+          "text": "220",
+          "at": 1779561554469
         },
         {
           "dir": "in",
-          "text": "Yes",
-          "at": 1779380292830
-        },
-        {
-          "dir": "out",
-          "text": "I checked the system, here are the cheapest laptops we have!",
-          "at": 1779380295128
+          "text": "300",
+          "at": 1779561554469
         },
         {
           "dir": "in",
-          "text": "CAT_NEXT",
-          "at": 1779380325683
+          "text": "Mobile MiFi\n250",
+          "at": 1779561554835
         },
         {
           "dir": "in",
-          "text": "VIEW_PRODUCT 992",
-          "at": 1779380360173
+          "text": "700",
+          "at": 1779561555443
         },
         {
           "dir": "in",
-          "text": "BUY 992",
-          "at": 1779380366838
-        },
-        {
-          "dir": "out",
-          "text": "I’ve handed this chat over to an assistant.",
-          "at": 1779380366895
+          "text": "800",
+          "at": 1779561555590
         },
         {
           "dir": "in",
-          "text": "BUY 1018",
-          "at": 1779382023313
-        },
-        {
-          "dir": "out",
-          "text": "I’ve handed this chat over to an assistant.",
-          "at": 1779382025977
+          "text": "500",
+          "at": 1779561555806
         },
         {
           "dir": "in",
-          "text": "HANDOFF_BOT_OFF:45YHC9S3X98X",
-          "at": 1779382039021
+          "text": "1000",
+          "at": 1779561555966
         },
         {
           "dir": "in",
-          "text": "HANDOFF_VIEW_CHAT:45YHC9S3X98X",
-          "at": 1779382047251
+          "text": "400",
+          "at": 1779561555966
+        },
+        {
+          "dir": "in",
+          "text": "Starlink Mini DC to DC cable \n30 meters\n450",
+          "at": 1779561556107
+        },
+        {
+          "dir": "in",
+          "text": "Starlink Mini Ethernet cable \n15 meters\n300",
+          "at": 1779561556250
+        },
+        {
+          "dir": "in",
+          "text": "Starlink Gen 3 Mesh Router\n\n1400",
+          "at": 1779561556408
+        },
+        {
+          "dir": "in",
+          "text": "Starlink Gen 3 150meters Standard Cable\n\n1300",
+          "at": 1779561556542
+        },
+        {
+          "dir": "in",
+          "text": "Gen 3 150meters Standard Cable\n\n1100",
+          "at": 1779561556966
+        },
+        {
+          "dir": "in",
+          "text": "Starlink Mini Router\n1000",
+          "at": 1779561557106
+        },
+        {
+          "dir": "in",
+          "text": "850",
+          "at": 1779561557106
+        },
+        {
+          "dir": "in",
+          "text": "Starlink Standard Mount \n700",
+          "at": 1779561557501
+        },
+        {
+          "dir": "in",
+          "text": "Starlink Gen 3 Mesh Router only\n\n1100",
+          "at": 1779561557800
+        },
+        {
+          "dir": "in",
+          "text": "Gen 3 original 15 meters cable \n\n700",
+          "at": 1779561557801
+        },
+        {
+          "dir": "in",
+          "text": "Gen 3 Power Brick\n1500",
+          "at": 1779561558039
+        },
+        {
+          "dir": "in",
+          "text": "Starlink Standard Kit\n5000",
+          "at": 1779561558316
+        },
+        {
+          "dir": "in",
+          "text": "Starlink Mini Kit\n2700",
+          "at": 1779561558317
+        },
+        {
+          "dir": "in",
+          "text": "Mikrotik Router\n2200",
+          "at": 1779561558610
+        },
+        {
+          "dir": "in",
+          "text": "Bot responding to old messages when offline",
+          "at": 1779562851624
+        },
+        {
+          "dir": "in",
+          "text": "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",
+          "at": 1779565559155
+        },
+        {
+          "dir": "in",
+          "text": "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",
+          "at": 1779565564068
         },
         {
           "dir": "in",
           "text": "Hi",
-          "at": 1779382083200
-        },
-        {
-          "dir": "in",
-          "text": "HANDOFF_BOT_ON:45YHC9S3X98X",
-          "at": 1779382088097
-        },
-        {
-          "dir": "in",
-          "text": "Hi",
-          "at": 1779382090976
-        },
-        {
-          "dir": "out",
-          "text": "Hello 👋 Welcome to EllTek Official.\n\nPlease how may I assist you?",
-          "at": 1779382091071
-        },
-        {
-          "dir": "in",
-          "text": "Hi",
-          "at": 1779383303141
+          "at": 1779565598150
         },
         {
           "dir": "out",
           "text": "Hi 👋 What are you looking for?\nExample: *gaming phone under 2500* or *iphone 13*.\n\nTap Menu to browse.",
-          "at": 1779383303582
+          "at": 1779565599000
         },
         {
           "dir": "in",
-          "text": "SHOW_CATALOG",
-          "at": 1779383305807
-        },
-        {
-          "dir": "in",
-          "text": "MENU_CAT 1",
-          "at": 1779383310613
-        },
-        {
-          "dir": "in",
-          "text": "MENU_CAT_BRANDS",
-          "at": 1779383313578
-        },
-        {
-          "dir": "in",
-          "text": "MENU_BRAND 0",
-          "at": 1779383315895
-        },
-        {
-          "dir": "in",
-          "text": "VIEW_PRODUCT 1136",
-          "at": 1779383321016
-        },
-        {
-          "dir": "in",
-          "text": "SELECT_VARIATION 1136 1235",
-          "at": 1779383325037
-        },
-        {
-          "dir": "in",
-          "text": "BUY_VAR 1136 1235",
-          "at": 1779383328514
+          "text": "Xup",
+          "at": 1779565603750
         },
         {
           "dir": "out",
-          "text": "I’ve handed this chat over to an assistant.",
-          "at": 1779383328558
-        },
-        {
-          "dir": "in",
-          "text": "HANDOFF_VIEW_CHAT:W3DT58YCOP33",
-          "at": 1779383332227
-        },
-        {
-          "dir": "in",
-          "text": "HANDOFF_BOT_OFF:7HSWFYHD2KMU",
-          "at": 1779385563201
-        },
-        {
-          "dir": "in",
-          "text": "HANDOFF_VIEW_CHAT:7HSWFYHD2KMU",
-          "at": 1779385567706
+          "text": "Hey there! How can I assist you today? Looking for something specific?",
+          "at": 1779565605783
         }
       ],
       "lastProductTopic": "laptop",
       "lastResultsMinPrice": 52.8,
       "lastResultsCategory": "Phones"
+    },
+    "122982127145064@lid": {
+      "lastAt": 1779561584419,
+      "state": "chat",
+      "greetedAt": 0,
+      "lastNudgeAt": 0,
+      "lastNudgeSig": "",
+      "aiFallbackAt": 1779561587421,
+      "history": [
+        {
+          "dir": "in",
+          "text": "Can I know you",
+          "at": 1779357241132
+        },
+        {
+          "dir": "out",
+          "text": "Of course! I'm your friendly sales assistant for EllTek Official, here to help you find the products you need. How can I assist you today?",
+          "at": 1779357246309
+        },
+        {
+          "dir": "in",
+          "text": "Your name please",
+          "at": 1779357291730
+        },
+        {
+          "dir": "out",
+          "text": "I don't have a specific name, but you can call me your sales assistant! How can I help you today?",
+          "at": 1779357299210
+        },
+        {
+          "dir": "in",
+          "text": "Sammy Joe’s friend right",
+          "at": 1779357342245
+        },
+        {
+          "dir": "out",
+          "text": "I don't have personal connections, but I'm here to assist you with any questions or products you might be interested in. What can I help you with today?",
+          "at": 1779357346837
+        },
+        {
+          "dir": "in",
+          "text": "I’m not interested in anything",
+          "at": 1779357487041
+        },
+        {
+          "dir": "out",
+          "text": "That's perfectly fine! If you ever have questions or need assistance in the future, feel free to reach out. Have a great day!",
+          "at": 1779357490928
+        },
+        {
+          "dir": "in",
+          "text": "You too",
+          "at": 1779357909298
+        },
+        {
+          "dir": "in",
+          "text": "Alright",
+          "at": 1779357916351
+        },
+        {
+          "dir": "in",
+          "text": "Wednesday and Thursday",
+          "at": 1779357959684
+        },
+        {
+          "dir": "out",
+          "text": "Could you please clarify what you mean by \"Wednesday and Thursday\"? Are you looking for specific products or information related to those days?",
+          "at": 1779357963692
+        },
+        {
+          "dir": "in",
+          "text": "Yeah",
+          "at": 1779357996098
+        },
+        {
+          "dir": "out",
+          "text": "Could you let me know what specific products or information you're looking for related to Wednesday and Thursday? That way, I can assist you better!",
+          "at": 1779358000394
+        },
+        {
+          "dir": "in",
+          "text": "Okay",
+          "at": 1779358021489
+        },
+        {
+          "dir": "out",
+          "text": "I'm sorry, I just checked the system and we don't have exactly what you're looking for right now.",
+          "at": 1779358026989
+        },
+        {
+          "dir": "in",
+          "text": "Awww \nSorry \nI wasn’t around \nI went to some wedding bi oo",
+          "at": 1779561583370
+        },
+        {
+          "dir": "in",
+          "text": "Ok",
+          "at": 1779561583643
+        },
+        {
+          "dir": "in",
+          "text": "Aww\nSorry",
+          "at": 1779561583890
+        },
+        {
+          "dir": "in",
+          "text": "Ok",
+          "at": 1779561584181
+        },
+        {
+          "dir": "in",
+          "text": "Alright",
+          "at": 1779561584419
+        }
+      ]
+    },
+    "120363402147582997@newsletter": {
+      "lastAt": 1779561580565,
+      "state": "chat",
+      "greetedAt": 0,
+      "lastNudgeAt": 0,
+      "lastNudgeSig": "",
+      "aiFallbackAt": 1779053377966,
+      "history": [
+        {
+          "dir": "in",
+          "text": "🔰🔰🔰🔰🔰🔰🔰🔰🔰\n*UMaT SRC*\n*Register for Miss UMaT 2026!*👑\r\n\r\nThe stage is set, and the spotlight is calling! The SRC is officially opening registration for Miss UMaT 2026.\r\nThis is more than a pageant. It’s your chance to represent excellence, intelligence, and the vibrant spirit of UMaT while unlocking incredible opportunities.\n \nRegister for FREE here:  \nhttps://forms.gle/bKqiiuVx9AoTiBF56\n\nInterested in sponsoring or partnering? Reach out to us at:  \r\n📞 0594238811 / 0257276700\n\n*#RaisingTheStandard*\n*#TheUbuntuEffect*",
+          "at": 1779053358248
+        },
+        {
+          "dir": "in",
+          "text": "🔰🔰🔰🔰🔰🔰🔰🔰🔰\n*UMaT SRC*\n*Register for Miss UMaT 2026!*👑\r\n\r\nThe stage is set, and the spotlight is calling! The SRC is officially opening registration for Miss UMaT 2026.\r\nThis is more than a pageant. It’s your chance to represent excellence, intelligence, and the vibrant spirit of UMaT while unlocking incredible opportunities.\n \nRegister for FREE here:  \nhttps://forms.gle/bKqiiuVx9AoTiBF56\n\nInterested in sponsoring or partnering? Reach out to us at:  \r\n📞 0594238811 / 0257276700\n\n*#RaisingTheStandard*\n*#TheUbuntuEffect*",
+          "at": 1779060256669
+        },
+        {
+          "dir": "out",
+          "text": "It looks like you're sharing information about the Miss UMaT 2026 pageant! If you need any specific products or services related to this event, feel free to ask!",
+          "at": 1779060260150
+        },
+        {
+          "dir": "in",
+          "text": "https://docs.google.com/forms/d/1QVxp6p2aMEXwoLXGAHoX50Mh6qPKlQq-Dj51wKGHTK4/edit\n\nSent from Firefox 🦊 https://mzl.la/43doGMX",
+          "at": 1779273427703
+        },
+        {
+          "dir": "out",
+          "text": "It seems you've shared a link to a Google Form. If you need assistance with anything specific related to the form or the event, just let me know!",
+          "at": 1779273433465
+        },
+        {
+          "dir": "in",
+          "text": "https://www.linkedin.com/safety/go/?url=http%3A%2F%2Fwww%2Etamarackgeo%2Ecom&urlhash=uue5&mt=JIr7Dacaos-gSHgXMa2lAircSA77OGJi2uJ5ZbS9VVlKmCx177wjJtCNk1k4EYZ6Runmxvl0r2IKe2XTLd9BkjVHV7zPwgVjgSPkhUuYojNKv1eaQXyLYsTrkQ&isSdui=true",
+          "at": 1779340764749
+        },
+        {
+          "dir": "out",
+          "text": "It looks like you've shared a LinkedIn link. If you need help with something specific regarding this link or any related topic, feel free to ask!",
+          "at": 1779340772595
+        },
+        {
+          "dir": "in",
+          "text": "*GRADUATE INTERNSHIP*\n\nRole: Graduate Intern (Entry-Level)\n\nOrganization: PREBBiE Group\n\nLocation: Dansoman, Accra-Ghana\n\n*Overview*\nApplications are open for the PREBBiE Group Graduate Internship Programme (GIP) 2026.\n\nAs part of the programme, interns will be deployed into functional roles aligned with their areas of interest and organisational needs, where they will contribute to ongoing projects, strategic initiatives, and core business activities. \n\n*Key Tracks*\n- Technology & Innovation\n- ⁠Projects & Programs\n- ⁠Communications\n- ⁠Finance & Accounting\n- ⁠Human Capital\n\n*Minimum Requirements*\n- Completed Bachelor’s degree from an accredited institution. Fields of study should be relevant to the functional areas of PREBBiE Group. \n- ⁠Less than 3 years of post-graduation experience, ensuring eligibility is limited to early-career professionals.  \n\n*APPLY USING THE LINK*\nhttps://prebbiegroup.com/graduate-internship-programme/\n\n*Application Deadline: June 3, 2026*",
+          "at": 1779561580565
+        }
+      ]
+    },
+    "3672650055760@lid": {
+      "lastAt": 1779561516344,
+      "state": "chat",
+      "email": "felixzatu94@gmail.com",
+      "momoNumber": "0551234987",
+      "greetedAt": 1779227814202,
+      "lastNudgeAt": 0,
+      "lastNudgeSig": "",
+      "aiFallbackAt": 1779561518715,
+      "deliveryMethodId": "local_delivery",
+      "deliveryMethodName": "Local delivery",
+      "deliveryFeeCents": 1000,
+      "deliveryAddress": "Kumasi Atonsu",
+      "history": [
+        {
+          "dir": "in",
+          "text": "SELECT_VARIATION 1136 1234",
+          "at": 1779208525052
+        },
+        {
+          "dir": "in",
+          "text": "BUY 948",
+          "at": 1779208531352
+        },
+        {
+          "dir": "in",
+          "text": "1",
+          "at": 1779208537787
+        },
+        {
+          "dir": "in",
+          "text": "DELIVERY local_delivery",
+          "at": 1779208544180
+        },
+        {
+          "dir": "in",
+          "text": "Kumasi Atonsah",
+          "at": 1779208561504
+        },
+        {
+          "dir": "in",
+          "text": "PAY_DIRECT",
+          "at": 1779208570491
+        },
+        {
+          "dir": "in",
+          "text": "0551234987",
+          "at": 1779208594891
+        },
+        {
+          "dir": "in",
+          "text": "I want to change my email",
+          "at": 1779208611074
+        },
+        {
+          "dir": "out",
+          "text": "Let's update your email!",
+          "at": 1779208617596
+        },
+        {
+          "dir": "in",
+          "text": "VIEW_PRODUCT 977",
+          "at": 1779208899282
+        },
+        {
+          "dir": "in",
+          "text": "Hi",
+          "at": 1779227814072
+        },
+        {
+          "dir": "out",
+          "text": "Hello 👋 Welcome to EllTek Official.\n\nPlease how may I assist you?",
+          "at": 1779227814853
+        },
+        {
+          "dir": "in",
+          "text": "I want a Samsung phone",
+          "at": 1779227820077
+        },
+        {
+          "dir": "out",
+          "text": "Here are some Samsung Galaxy phones you might like!",
+          "at": 1779227824904
+        },
+        {
+          "dir": "in",
+          "text": "VIEW_PRODUCT 1136",
+          "at": 1779227838510
+        },
+        {
+          "dir": "in",
+          "text": "SELECT_VARIATION 1136 1231",
+          "at": 1779227850387
+        },
+        {
+          "dir": "in",
+          "text": "BUY_VAR 1136 1231",
+          "at": 1779227857787
+        },
+        {
+          "dir": "in",
+          "text": "2",
+          "at": 1779227865061
+        },
+        {
+          "dir": "in",
+          "text": "DELIVERY local_delivery",
+          "at": 1779227873657
+        },
+        {
+          "dir": "in",
+          "text": "CHANGE_ADDRESS",
+          "at": 1779227877566
+        },
+        {
+          "dir": "in",
+          "text": "Kumasi Atonsu",
+          "at": 1779227891550
+        },
+        {
+          "dir": "in",
+          "text": "CHANGE_EMAIL",
+          "at": 1779227897834
+        },
+        {
+          "dir": "in",
+          "text": "CHANGE_EMAIL",
+          "at": 1779227900615
+        },
+        {
+          "dir": "in",
+          "text": "felixzatu94@gmail.com",
+          "at": 1779227925552
+        },
+        {
+          "dir": "in",
+          "text": "CHECKOUT_PROCEED",
+          "at": 1779227929223
+        },
+        {
+          "dir": "in",
+          "text": "PAY_DIRECT",
+          "at": 1779227934526
+        },
+        {
+          "dir": "in",
+          "text": "0551234987",
+          "at": 1779227942915
+        },
+        {
+          "dir": "in",
+          "text": "VIEW_PRODUCT 973",
+          "at": 1779356671494
+        },
+        {
+          "dir": "in",
+          "text": "Boy",
+          "at": 1779561516344
+        },
+        {
+          "dir": "in",
+          "text": "Buy charger cable come when you Dey come house wai ago give you money adey beg waa ma own just broke like that",
+          "at": 1779561516344
+        }
+      ],
+      "lastProductTopic": "Samsung phone"
+    },
+    "180139954540562@lid": {
+      "lastAt": 1779561399449,
+      "state": "chat",
+      "greetedAt": 0,
+      "lastNudgeAt": 0,
+      "lastNudgeSig": "",
+      "aiFallbackAt": 1779561402475,
+      "history": [
+        {
+          "dir": "in",
+          "text": "❌ Internal error while processing pairing request.",
+          "at": 1779561398834
+        },
+        {
+          "dir": "in",
+          "text": "AI_FALLBACK_BROWSE",
+          "at": 1779561399317
+        },
+        {
+          "dir": "in",
+          "text": "AI_FALLBACK_SUPPORT",
+          "at": 1779561399449
+        }
+      ]
+    },
+    "38582144229480@lid": {
+      "lastAt": 1779561336883,
+      "state": "chat",
+      "greetedAt": 0,
+      "lastNudgeAt": 0,
+      "lastNudgeSig": "",
+      "history": [
+        {
+          "dir": "in",
+          "text": "🚀 Do you want to grow your WhatsApp status views and reach a larger audience for your business? 📈🔥 👉 Join this exclusive WhatsApp group and gain valuable contacts quickly! 🤝 More contacts = More views 👀, More engagement 💬, and More potential customers 💰! ✅ Don’t miss out—tap the link below to join now! https://chat.whatsapp.com/D6CNupIFPU9LS2NVNzwzau?mode=hqrc",
+          "at": 1779561336883
+        }
+      ]
     },
     "91702366879842@lid": {
       "lastAt": 1779385565869,
@@ -488,307 +859,6 @@
         }
       ],
       "lastProductTopic": "bot"
-    },
-    "122982127145064@lid": {
-      "lastAt": 1779358026989,
-      "state": "chat",
-      "greetedAt": 0,
-      "lastNudgeAt": 0,
-      "lastNudgeSig": "",
-      "aiFallbackAt": 1779357929344,
-      "history": [
-        {
-          "dir": "in",
-          "text": "Can I know you",
-          "at": 1779357241132
-        },
-        {
-          "dir": "out",
-          "text": "Of course! I'm your friendly sales assistant for EllTek Official, here to help you find the products you need. How can I assist you today?",
-          "at": 1779357246309
-        },
-        {
-          "dir": "in",
-          "text": "Your name please",
-          "at": 1779357291730
-        },
-        {
-          "dir": "out",
-          "text": "I don't have a specific name, but you can call me your sales assistant! How can I help you today?",
-          "at": 1779357299210
-        },
-        {
-          "dir": "in",
-          "text": "Sammy Joe’s friend right",
-          "at": 1779357342245
-        },
-        {
-          "dir": "out",
-          "text": "I don't have personal connections, but I'm here to assist you with any questions or products you might be interested in. What can I help you with today?",
-          "at": 1779357346837
-        },
-        {
-          "dir": "in",
-          "text": "I’m not interested in anything",
-          "at": 1779357487041
-        },
-        {
-          "dir": "out",
-          "text": "That's perfectly fine! If you ever have questions or need assistance in the future, feel free to reach out. Have a great day!",
-          "at": 1779357490928
-        },
-        {
-          "dir": "in",
-          "text": "You too",
-          "at": 1779357909298
-        },
-        {
-          "dir": "in",
-          "text": "Alright",
-          "at": 1779357916351
-        },
-        {
-          "dir": "in",
-          "text": "Wednesday and Thursday",
-          "at": 1779357959684
-        },
-        {
-          "dir": "out",
-          "text": "Could you please clarify what you mean by \"Wednesday and Thursday\"? Are you looking for specific products or information related to those days?",
-          "at": 1779357963692
-        },
-        {
-          "dir": "in",
-          "text": "Yeah",
-          "at": 1779357996098
-        },
-        {
-          "dir": "out",
-          "text": "Could you let me know what specific products or information you're looking for related to Wednesday and Thursday? That way, I can assist you better!",
-          "at": 1779358000394
-        },
-        {
-          "dir": "in",
-          "text": "Okay",
-          "at": 1779358021489
-        },
-        {
-          "dir": "out",
-          "text": "I'm sorry, I just checked the system and we don't have exactly what you're looking for right now.",
-          "at": 1779358026989
-        }
-      ]
-    },
-    "3672650055760@lid": {
-      "lastAt": 1779356671494,
-      "state": "chat",
-      "email": "felixzatu94@gmail.com",
-      "momoNumber": "0551234987",
-      "greetedAt": 1779227814202,
-      "lastNudgeAt": 0,
-      "lastNudgeSig": "",
-      "deliveryMethodId": "local_delivery",
-      "deliveryMethodName": "Local delivery",
-      "deliveryFeeCents": 1000,
-      "deliveryAddress": "Kumasi Atonsu",
-      "history": [
-        {
-          "dir": "in",
-          "text": "DELIVERY local_delivery",
-          "at": 1779208507341
-        },
-        {
-          "dir": "out",
-          "text": "Here are some Samsung Galaxy phones you might like!",
-          "at": 1779208517770
-        },
-        {
-          "dir": "in",
-          "text": "SELECT_VARIATION 1136 1234",
-          "at": 1779208525052
-        },
-        {
-          "dir": "in",
-          "text": "BUY 948",
-          "at": 1779208531352
-        },
-        {
-          "dir": "in",
-          "text": "1",
-          "at": 1779208537787
-        },
-        {
-          "dir": "in",
-          "text": "DELIVERY local_delivery",
-          "at": 1779208544180
-        },
-        {
-          "dir": "in",
-          "text": "Kumasi Atonsah",
-          "at": 1779208561504
-        },
-        {
-          "dir": "in",
-          "text": "PAY_DIRECT",
-          "at": 1779208570491
-        },
-        {
-          "dir": "in",
-          "text": "0551234987",
-          "at": 1779208594891
-        },
-        {
-          "dir": "in",
-          "text": "I want to change my email",
-          "at": 1779208611074
-        },
-        {
-          "dir": "out",
-          "text": "Let's update your email!",
-          "at": 1779208617596
-        },
-        {
-          "dir": "in",
-          "text": "VIEW_PRODUCT 977",
-          "at": 1779208899282
-        },
-        {
-          "dir": "in",
-          "text": "Hi",
-          "at": 1779227814072
-        },
-        {
-          "dir": "out",
-          "text": "Hello 👋 Welcome to EllTek Official.\n\nPlease how may I assist you?",
-          "at": 1779227814853
-        },
-        {
-          "dir": "in",
-          "text": "I want a Samsung phone",
-          "at": 1779227820077
-        },
-        {
-          "dir": "out",
-          "text": "Here are some Samsung Galaxy phones you might like!",
-          "at": 1779227824904
-        },
-        {
-          "dir": "in",
-          "text": "VIEW_PRODUCT 1136",
-          "at": 1779227838510
-        },
-        {
-          "dir": "in",
-          "text": "SELECT_VARIATION 1136 1231",
-          "at": 1779227850387
-        },
-        {
-          "dir": "in",
-          "text": "BUY_VAR 1136 1231",
-          "at": 1779227857787
-        },
-        {
-          "dir": "in",
-          "text": "2",
-          "at": 1779227865061
-        },
-        {
-          "dir": "in",
-          "text": "DELIVERY local_delivery",
-          "at": 1779227873657
-        },
-        {
-          "dir": "in",
-          "text": "CHANGE_ADDRESS",
-          "at": 1779227877566
-        },
-        {
-          "dir": "in",
-          "text": "Kumasi Atonsu",
-          "at": 1779227891550
-        },
-        {
-          "dir": "in",
-          "text": "CHANGE_EMAIL",
-          "at": 1779227897834
-        },
-        {
-          "dir": "in",
-          "text": "CHANGE_EMAIL",
-          "at": 1779227900615
-        },
-        {
-          "dir": "in",
-          "text": "felixzatu94@gmail.com",
-          "at": 1779227925552
-        },
-        {
-          "dir": "in",
-          "text": "CHECKOUT_PROCEED",
-          "at": 1779227929223
-        },
-        {
-          "dir": "in",
-          "text": "PAY_DIRECT",
-          "at": 1779227934526
-        },
-        {
-          "dir": "in",
-          "text": "0551234987",
-          "at": 1779227942915
-        },
-        {
-          "dir": "in",
-          "text": "VIEW_PRODUCT 973",
-          "at": 1779356671494
-        }
-      ],
-      "lastProductTopic": "Samsung phone"
-    },
-    "120363402147582997@newsletter": {
-      "lastAt": 1779340772595,
-      "state": "chat",
-      "greetedAt": 0,
-      "lastNudgeAt": 0,
-      "lastNudgeSig": "",
-      "aiFallbackAt": 1779053377966,
-      "history": [
-        {
-          "dir": "in",
-          "text": "🔰🔰🔰🔰🔰🔰🔰🔰🔰\n*UMaT SRC*\n*Register for Miss UMaT 2026!*👑\r\n\r\nThe stage is set, and the spotlight is calling! The SRC is officially opening registration for Miss UMaT 2026.\r\nThis is more than a pageant. It’s your chance to represent excellence, intelligence, and the vibrant spirit of UMaT while unlocking incredible opportunities.\n \nRegister for FREE here:  \nhttps://forms.gle/bKqiiuVx9AoTiBF56\n\nInterested in sponsoring or partnering? Reach out to us at:  \r\n📞 0594238811 / 0257276700\n\n*#RaisingTheStandard*\n*#TheUbuntuEffect*",
-          "at": 1779053358248
-        },
-        {
-          "dir": "in",
-          "text": "🔰🔰🔰🔰🔰🔰🔰🔰🔰\n*UMaT SRC*\n*Register for Miss UMaT 2026!*👑\r\n\r\nThe stage is set, and the spotlight is calling! The SRC is officially opening registration for Miss UMaT 2026.\r\nThis is more than a pageant. It’s your chance to represent excellence, intelligence, and the vibrant spirit of UMaT while unlocking incredible opportunities.\n \nRegister for FREE here:  \nhttps://forms.gle/bKqiiuVx9AoTiBF56\n\nInterested in sponsoring or partnering? Reach out to us at:  \r\n📞 0594238811 / 0257276700\n\n*#RaisingTheStandard*\n*#TheUbuntuEffect*",
-          "at": 1779060256669
-        },
-        {
-          "dir": "out",
-          "text": "It looks like you're sharing information about the Miss UMaT 2026 pageant! If you need any specific products or services related to this event, feel free to ask!",
-          "at": 1779060260150
-        },
-        {
-          "dir": "in",
-          "text": "https://docs.google.com/forms/d/1QVxp6p2aMEXwoLXGAHoX50Mh6qPKlQq-Dj51wKGHTK4/edit\n\nSent from Firefox 🦊 https://mzl.la/43doGMX",
-          "at": 1779273427703
-        },
-        {
-          "dir": "out",
-          "text": "It seems you've shared a link to a Google Form. If you need assistance with anything specific related to the form or the event, just let me know!",
-          "at": 1779273433465
-        },
-        {
-          "dir": "in",
-          "text": "https://www.linkedin.com/safety/go/?url=http%3A%2F%2Fwww%2Etamarackgeo%2Ecom&urlhash=uue5&mt=JIr7Dacaos-gSHgXMa2lAircSA77OGJi2uJ5ZbS9VVlKmCx177wjJtCNk1k4EYZ6Runmxvl0r2IKe2XTLd9BkjVHV7zPwgVjgSPkhUuYojNKv1eaQXyLYsTrkQ&isSdui=true",
-          "at": 1779340764749
-        },
-        {
-          "dir": "out",
-          "text": "It looks like you've shared a LinkedIn link. If you need help with something specific regarding this link or any related topic, feel free to ask!",
-          "at": 1779340772595
-        }
-      ]
     },
     "120363424484852138@newsletter": {
       "lastAt": 1779250499323,
@@ -988,165 +1058,6 @@
         }
       ],
       "lastProductTopic": "Samsung Galaxy"
-    },
-    "125456330293434@lid": {
-      "lastAt": 1778922109868,
-      "state": "chat",
-      "greetedAt": 0,
-      "lastNudgeAt": 0,
-      "lastNudgeSig": "",
-      "history": [
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921845219
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921848686
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921852527
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921857826
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921861232
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921865470
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921870966
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921874501
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921877930
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921881376
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921884918
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921888651
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921892045
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921895765
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921899593
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921903180
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921906608
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778921910443
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778922071619
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778922075760
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778922079203
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778922082517
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778922085956
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778922089313
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778922092709
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778922096248
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778922099623
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778922102929
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778922106393
-        },
-        {
-          "dir": "in",
-          "text": "This is an automated WhatsApp bot. We cannot read your messages. For support, open a ticket in the app.",
-          "at": 1778922109868
-        }
-      ]
     }
   }
 }

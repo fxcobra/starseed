@@ -676,7 +676,14 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
     groupId: string,
     bodyText: string,
     footerText: string,
-    cards: Array<{ product_id?: number; image_url: string; body: string; footer?: string; url?: string }>,
+    cards: Array<{
+      product_id?: number;
+      image_url: string;
+      body: string;
+      footer?: string;
+      url?: string;
+      buttons?: Array<{ text: string; url: string }>;
+    }>,
     buttonText?: string
   ): Promise<string | null> {
     if (!groupId.endsWith("@g.us")) throw new Error("Invalid group id.");
@@ -696,6 +703,17 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
         body: typeof (c as any).body === "string" ? String((c as any).body).trim() : "",
         footer: typeof (c as any).footer === "string" ? String((c as any).footer).trim() : "",
         url: typeof (c as any).url === "string" ? String((c as any).url).trim() : "",
+        buttons: Array.isArray((c as any).buttons)
+          ? ((c as any).buttons as unknown[])
+              .filter((b) => b && typeof b === "object")
+              .map((b) => b as Record<string, unknown>)
+              .map((b) => ({
+                text: typeof b.text === "string" ? b.text.trim() : "",
+                url: typeof b.url === "string" ? b.url.trim() : "",
+              }))
+              .filter((b) => b.text && b.url)
+              .slice(0, 24)
+          : [],
       }))
       .filter((c) => c.image_url && c.body)
       .slice(0, 10);
@@ -709,9 +727,30 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
       firstId = (await sendGroupText(groupId, introParts.join("\n\n"))) ?? null;
     }
 
-    for (const c of list) {
+    const buildCtaButtons = (c: (typeof list)[number]) => {
+      if (Array.isArray(c.buttons) && c.buttons.length) {
+        return c.buttons.map((b) => ({ text: b.text, url: b.url }));
+      }
+      if (c.url) {
+        return [{ text: displayText, url: c.url }];
+      }
       const dmUrl =
-        typeof c.product_id === "number" && Number.isFinite(c.product_id) ? `${waBase}?text=${encodeURIComponent(`${cmd} ${c.product_id}`)}` : waBase;
+        typeof c.product_id === "number" && Number.isFinite(c.product_id)
+          ? `${waBase}?text=${encodeURIComponent(`${cmd} ${c.product_id}`)}`
+          : waBase;
+      return [{ text: displayText, url: dmUrl }];
+    };
+
+    const chunks3 = <T,>(arr: T[]) => {
+      const out: T[][] = [];
+      for (let i = 0; i < arr.length; i += 3) out.push(arr.slice(i, i + 3));
+      return out;
+    };
+
+    for (const c of list) {
+      const ctaButtons = buildCtaButtons(c);
+      const firstBtn = ctaButtons.length ? ctaButtons[0]! : null;
+      const restChunks = chunks3(ctaButtons.slice(1));
 
       try {
         const buf = await withTimeout(downloadBuffer(c.image_url), 60_000, "Media download timed out.");
@@ -719,6 +758,19 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
 
         const bodySafe = (c.body ?? "").trim().slice(0, 900);
         const footerSafe = ((c.footer ?? "").trim() || "Tap below to chat with us").slice(0, 60);
+
+        const btnsFirst = firstBtn
+          ? [
+              {
+                name: "cta_url",
+                buttonParamsJson: JSON.stringify({
+                  display_text: firstBtn.text.slice(0, 28),
+                  url: firstBtn.url,
+                  merchant_url: firstBtn.url,
+                }),
+              },
+            ]
+          : [];
 
         const msg = generateWAMessageFromContent(
           groupId,
@@ -731,16 +783,7 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
                   body: { text: bodySafe },
                   footer: { text: footerSafe },
                   nativeFlowMessage: {
-                    buttons: [
-                      {
-                        name: "cta_url",
-                        buttonParamsJson: JSON.stringify({
-                          display_text: `💬 ${displayText}`,
-                          url: dmUrl,
-                          merchant_url: dmUrl,
-                        }),
-                      },
-                    ],
+                    buttons: btnsFirst.length ? btnsFirst : undefined,
                   },
                 },
               },
@@ -751,6 +794,13 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
 
         await withTimeout((sock as any).relayMessage(groupId, msg.message, { messageId: msg.key.id }), 15_000, "Interactive relay timed out.");
         if (!firstId) firstId = msg.key.id;
+
+        if (restChunks.length) {
+          for (const groupButtons of restChunks) {
+            await sendGroupCtaLinks(groupId, bodySafe, footerSafe, groupButtons);
+            await new Promise((r) => setTimeout(r, 150));
+          }
+        }
       } catch (e: unknown) {
         const fallbackParts: string[] = [];
         const bodySafe = (c.body ?? "").trim().slice(0, 900);
@@ -758,7 +808,6 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
         if (bodySafe) fallbackParts.push(bodySafe);
         if (footerSafe) fallbackParts.push(footerSafe);
         if (c.url) fallbackParts.push(c.url);
-        fallbackParts.push(`${displayText}: ${dmUrl}`);
         try {
           const id = await sendGroupImage(groupId, c.image_url, fallbackParts.join("\n\n").trim());
           if (!firstId && id) firstId = id;
@@ -766,9 +815,60 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
           handlers.onError(e2 instanceof Error ? e2.message : "Group drop failed.");
         }
       }
-      await new Promise((r) => setTimeout(r, 600));
+      await new Promise((r) => setTimeout(r, 150));
     }
     return firstId;
+  }
+
+  async function sendGroupCtaLinks(
+    groupId: string,
+    bodyText: string,
+    footerText: string,
+    buttons: Array<{ text: string; url: string }>
+  ): Promise<string | null> {
+    if (!groupId.endsWith("@g.us")) throw new Error("Invalid group id.");
+    const list = (Array.isArray(buttons) ? buttons : [])
+      .filter((b) => b && typeof b === "object")
+      .map((b) => ({
+        text: typeof (b as any).text === "string" ? String((b as any).text).trim() : "",
+        url: typeof (b as any).url === "string" ? String((b as any).url).trim() : "",
+      }))
+      .filter((b) => b.text && b.url)
+      .slice(0, 3);
+    if (!list.length || typeof generateWAMessageFromContent !== "function") return null;
+
+    const bodySafe = (bodyText ?? "").trim().slice(0, 900) || "Links";
+    const footerSafe = (footerText ?? "").trim().slice(0, 60) || "Tap below";
+
+    const msg = generateWAMessageFromContent(
+      groupId,
+      {
+        viewOnceMessage: {
+          message: {
+            messageContextInfo: { deviceListMetadata: {}, deviceListMetadataVersion: 2 },
+            interactiveMessage: {
+              header: { title: "", hasMediaAttachment: false },
+              body: { text: bodySafe },
+              footer: { text: footerSafe },
+              nativeFlowMessage: {
+                buttons: list.map((b) => ({
+                  name: "cta_url",
+                  buttonParamsJson: JSON.stringify({
+                    display_text: b.text.slice(0, 28),
+                    url: b.url,
+                    merchant_url: b.url,
+                  }),
+                })),
+              },
+            },
+          },
+        },
+      } as any,
+      { userJid: (sock as any).user?.id }
+    );
+
+    await withTimeout((sock as any).relayMessage(groupId, msg.message, { messageId: msg.key.id }), 15_000, "Interactive relay timed out.");
+    return typeof msg.key?.id === "string" && msg.key.id.trim() ? msg.key.id : null;
   }
 
   async function sendGroupCtaCard(
@@ -904,6 +1004,7 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
     sendGroupImage,
     sendGroupProductImages,
     sendGroupCtaCard,
+    sendGroupCtaLinks,
     sendStatusText,
     sendStatusImage,
     sendStatusVideo,

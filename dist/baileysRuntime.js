@@ -674,6 +674,17 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
             body: typeof c.body === "string" ? String(c.body).trim() : "",
             footer: typeof c.footer === "string" ? String(c.footer).trim() : "",
             url: typeof c.url === "string" ? String(c.url).trim() : "",
+            buttons: Array.isArray(c.buttons)
+                ? c.buttons
+                    .filter((b) => b && typeof b === "object")
+                    .map((b) => b)
+                    .map((b) => ({
+                    text: typeof b.text === "string" ? b.text.trim() : "",
+                    url: typeof b.url === "string" ? b.url.trim() : "",
+                }))
+                    .filter((b) => b.text && b.url)
+                    .slice(0, 24)
+                : [],
         }))
             .filter((c) => c.image_url && c.body)
             .slice(0, 10);
@@ -686,13 +697,45 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
         if (introParts.length) {
             firstId = (await sendGroupText(groupId, introParts.join("\n\n"))) ?? null;
         }
+        const buildCtaButtons = (c) => {
+            if (Array.isArray(c.buttons) && c.buttons.length) {
+                return c.buttons.map((b) => ({ text: b.text, url: b.url }));
+            }
+            if (c.url) {
+                return [{ text: displayText, url: c.url }];
+            }
+            const dmUrl = typeof c.product_id === "number" && Number.isFinite(c.product_id)
+                ? `${waBase}?text=${encodeURIComponent(`${cmd} ${c.product_id}`)}`
+                : waBase;
+            return [{ text: displayText, url: dmUrl }];
+        };
+        const chunks3 = (arr) => {
+            const out = [];
+            for (let i = 0; i < arr.length; i += 3)
+                out.push(arr.slice(i, i + 3));
+            return out;
+        };
         for (const c of list) {
-            const dmUrl = typeof c.product_id === "number" && Number.isFinite(c.product_id) ? `${waBase}?text=${encodeURIComponent(`${cmd} ${c.product_id}`)}` : waBase;
+            const ctaButtons = buildCtaButtons(c);
+            const firstBtn = ctaButtons.length ? ctaButtons[0] : null;
+            const restChunks = chunks3(ctaButtons.slice(1));
             try {
                 const buf = await withTimeout(downloadBuffer(c.image_url), 60_000, "Media download timed out.");
                 const media = await withTimeout(Promise.resolve(prepareWAMessageMedia({ image: buf }, { upload })), 25_000, "Media prepare timed out.");
                 const bodySafe = (c.body ?? "").trim().slice(0, 900);
                 const footerSafe = ((c.footer ?? "").trim() || "Tap below to chat with us").slice(0, 60);
+                const btnsFirst = firstBtn
+                    ? [
+                        {
+                            name: "cta_url",
+                            buttonParamsJson: JSON.stringify({
+                                display_text: firstBtn.text.slice(0, 28),
+                                url: firstBtn.url,
+                                merchant_url: firstBtn.url,
+                            }),
+                        },
+                    ]
+                    : [];
                 const msg = generateWAMessageFromContent(groupId, {
                     viewOnceMessage: {
                         message: {
@@ -702,16 +745,7 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
                                 body: { text: bodySafe },
                                 footer: { text: footerSafe },
                                 nativeFlowMessage: {
-                                    buttons: [
-                                        {
-                                            name: "cta_url",
-                                            buttonParamsJson: JSON.stringify({
-                                                display_text: `💬 ${displayText}`,
-                                                url: dmUrl,
-                                                merchant_url: dmUrl,
-                                            }),
-                                        },
-                                    ],
+                                    buttons: btnsFirst.length ? btnsFirst : undefined,
                                 },
                             },
                         },
@@ -720,6 +754,12 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
                 await withTimeout(sock.relayMessage(groupId, msg.message, { messageId: msg.key.id }), 15_000, "Interactive relay timed out.");
                 if (!firstId)
                     firstId = msg.key.id;
+                if (restChunks.length) {
+                    for (const groupButtons of restChunks) {
+                        await sendGroupCtaLinks(groupId, bodySafe, footerSafe, groupButtons);
+                        await new Promise((r) => setTimeout(r, 150));
+                    }
+                }
             }
             catch (e) {
                 const fallbackParts = [];
@@ -731,7 +771,6 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
                     fallbackParts.push(footerSafe);
                 if (c.url)
                     fallbackParts.push(c.url);
-                fallbackParts.push(`${displayText}: ${dmUrl}`);
                 try {
                     const id = await sendGroupImage(groupId, c.image_url, fallbackParts.join("\n\n").trim());
                     if (!firstId && id)
@@ -741,9 +780,49 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
                     handlers.onError(e2 instanceof Error ? e2.message : "Group drop failed.");
                 }
             }
-            await new Promise((r) => setTimeout(r, 600));
+            await new Promise((r) => setTimeout(r, 150));
         }
         return firstId;
+    }
+    async function sendGroupCtaLinks(groupId, bodyText, footerText, buttons) {
+        if (!groupId.endsWith("@g.us"))
+            throw new Error("Invalid group id.");
+        const list = (Array.isArray(buttons) ? buttons : [])
+            .filter((b) => b && typeof b === "object")
+            .map((b) => ({
+            text: typeof b.text === "string" ? String(b.text).trim() : "",
+            url: typeof b.url === "string" ? String(b.url).trim() : "",
+        }))
+            .filter((b) => b.text && b.url)
+            .slice(0, 3);
+        if (!list.length || typeof generateWAMessageFromContent !== "function")
+            return null;
+        const bodySafe = (bodyText ?? "").trim().slice(0, 900) || "Links";
+        const footerSafe = (footerText ?? "").trim().slice(0, 60) || "Tap below";
+        const msg = generateWAMessageFromContent(groupId, {
+            viewOnceMessage: {
+                message: {
+                    messageContextInfo: { deviceListMetadata: {}, deviceListMetadataVersion: 2 },
+                    interactiveMessage: {
+                        header: { title: "", hasMediaAttachment: false },
+                        body: { text: bodySafe },
+                        footer: { text: footerSafe },
+                        nativeFlowMessage: {
+                            buttons: list.map((b) => ({
+                                name: "cta_url",
+                                buttonParamsJson: JSON.stringify({
+                                    display_text: b.text.slice(0, 28),
+                                    url: b.url,
+                                    merchant_url: b.url,
+                                }),
+                            })),
+                        },
+                    },
+                },
+            },
+        }, { userJid: sock.user?.id });
+        await withTimeout(sock.relayMessage(groupId, msg.message, { messageId: msg.key.id }), 15_000, "Interactive relay timed out.");
+        return typeof msg.key?.id === "string" && msg.key.id.trim() ? msg.key.id : null;
     }
     async function sendGroupCtaCard(groupId, bodyText, footerText, prefillText, buttonText) {
         if (!groupId.endsWith("@g.us"))
@@ -841,6 +920,7 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
         sendGroupImage,
         sendGroupProductImages,
         sendGroupCtaCard,
+        sendGroupCtaLinks,
         sendStatusText,
         sendStatusImage,
         sendStatusVideo,
