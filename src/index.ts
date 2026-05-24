@@ -83,6 +83,10 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true, baileysEnabled });
 });
 
+app.get("/api/ping", (_req, res) => {
+  res.status(200).send("Awake");
+});
+
 app.get("/version", async (_req, res) => {
   try {
     const pkgPath = path.resolve(PKG_ROOT, "package.json");
