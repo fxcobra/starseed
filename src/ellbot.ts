@@ -113,6 +113,7 @@ const vendorBotConfigCache = new Map<
       vendor: { id: number; slug: string; name: string };
       openrouter: { keys: string[]; model: string | null };
       manualPayment: { enabled: boolean; title: string; instructions: string };
+      payments?: { paystack?: { enabled?: boolean; configured?: boolean } };
       whatsappBotBrain: {
         storeName: string;
         shopPhone: string;
@@ -229,6 +230,10 @@ export async function fetchVendorBotConfig(vendorId: string) {
   const enabled = Boolean(manual?.enabled);
   const title = typeof manual?.title === "string" && manual.title.trim() ? manual.title.trim() : "Manual payment";
   const instructions = typeof manual?.instructions === "string" ? manual.instructions.trim() : "";
+  const payments = (json as any)?.payments;
+  const paystack = payments?.paystack;
+  const paystackEnabled = Boolean(paystack?.enabled);
+  const paystackConfigured = Boolean(paystack?.configured);
 
   const brain = (json as any)?.whatsappBotBrain;
   const brainStoreName = typeof brain?.storeName === "string" ? brain.storeName.trim() : "";
@@ -293,6 +298,7 @@ export async function fetchVendorBotConfig(vendorId: string) {
     vendor: { id: number; slug: string; name: string };
     openrouter: { keys: string[]; model: string | null };
     manualPayment: { enabled: boolean; title: string; instructions: string };
+    payments: { paystack: { enabled: boolean; configured: boolean } };
     whatsappBotBrain: {
       storeName: string;
       shopPhone: string;
@@ -339,6 +345,7 @@ export async function fetchVendorBotConfig(vendorId: string) {
     },
     openrouter: { keys: Array.from(new Set(keys)).slice(0, 10), model },
     manualPayment: { enabled, title, instructions },
+    payments: { paystack: { enabled: paystackEnabled, configured: paystackConfigured } },
     whatsappBotBrain: {
       storeName: brainStoreName || vendorName || "Our Store",
       shopPhone: brainPhone,
@@ -2220,12 +2227,21 @@ export function createEllbot(deps: EllbotDeps) {
 
     const media = await prepareImageMedia(cart.image_url || cart.product.image_url, cart.title, "Payment media prepare timed out.");
 
-    const allButtons = [
-      { name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Paystack Link", id: "PAY_LINK" }) },
-      { name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Direct MoMo", id: "PAY_DIRECT" }) },
-      { name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Call to Order", id: "PAY_MANUAL" }) },
-      { name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Cancel Order", id: "CANCEL_CHECKOUT" }) },
-    ];
+    const cfg = await fetchVendorBotConfig(deps.vendorId);
+    const canPaystack = Boolean(cfg?.payments?.paystack?.configured);
+    const canManual = Boolean(cfg?.manualPayment?.enabled);
+
+    const allButtons: Array<{ name: string; buttonParamsJson: string }> = [];
+    if (canPaystack) {
+      allButtons.push({ name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Paystack Link", id: "PAY_LINK" }) });
+      allButtons.push({ name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Direct MoMo", id: "PAY_DIRECT" }) });
+    }
+    if (canManual) {
+      allButtons.push({ name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Manual payment", id: "PAY_MANUAL" }) });
+    } else {
+      allButtons.push({ name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Call to Order", id: "PAY_MANUAL" }) });
+    }
+    allButtons.push({ name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Cancel Order", id: "CANCEL_CHECKOUT" }) });
 
     for (let i = 0; i < allButtons.length; i += 3) {
       const chunk = allButtons.slice(i, i + 3);
@@ -3826,6 +3842,10 @@ export function createEllbot(deps: EllbotDeps) {
     }
 
     if (upperText === "PAY_LINK") {
+      if (!vendorCfg?.payments?.paystack?.configured) {
+        await sendWithMenu(to, session, "Paystack payment is not available for this store right now. Please select Manual payment.", storeName);
+        return;
+      }
       if (
         await maybeTriggerHandoff(to, session, vendorCfg, storeName, "before_payment", {
           title: session.cart?.title ?? "",
@@ -3948,7 +3968,15 @@ export function createEllbot(deps: EllbotDeps) {
         );
       } catch (e: unknown) {
         deps.onError(e instanceof Error ? e.message : "MoMo charge failed.");
-        await sendWithMenu(to, session, "❌ Direct MoMo charge failed. Please use the Paystack Link option instead (or tap Menu to browse).", storeName);
+        const canPaystack = Boolean(vendorCfg?.payments?.paystack?.configured);
+        await sendWithMenu(
+          to,
+          session,
+          canPaystack
+            ? "❌ Direct MoMo charge failed. Please use the Paystack Link option instead (or tap Menu to browse)."
+            : "❌ Direct MoMo charge failed. Please use Manual payment instead (or tap Menu to browse).",
+          storeName
+        );
       }
       return;
     }
