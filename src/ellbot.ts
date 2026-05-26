@@ -1963,6 +1963,110 @@ export function createEllbot(deps: EllbotDeps) {
     if (!hits.length) return hits;
     if (!input || !query) return hits;
 
+    const strongTokens = (() => {
+      const t = input.toLowerCase();
+      const stop = new Set([
+        "i",
+        "me",
+        "want",
+        "need",
+        "show",
+        "some",
+        "any",
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "for",
+        "with",
+        "please",
+        "looking",
+        "available",
+        "price",
+        "cost",
+        "buy",
+        "order",
+      ]);
+      const raw = t
+        .replace(/[^a-z0-9\s]/g, " ")
+        .split(/\s+/)
+        .map((x) => x.trim())
+        .filter((x) => x && !stop.has(x))
+        .slice(0, 30);
+      const out: string[] = [];
+      const keepWords = new Set([
+        "iphone",
+        "ipad",
+        "macbook",
+        "samsung",
+        "pixel",
+        "tecno",
+        "infinix",
+        "nokia",
+        "xiaomi",
+        "redmi",
+        "pro",
+        "max",
+        "mini",
+        "plus",
+        "ultra",
+        "xr",
+        "xs",
+        "se",
+        "air",
+        "note",
+      ]);
+      for (const tok of raw) {
+        if (/^\d{1,4}$/.test(tok)) {
+          out.push(tok);
+          continue;
+        }
+        if (/^\d+gb$/.test(tok)) {
+          out.push(tok);
+          continue;
+        }
+        const m = tok.match(/^(\d{1,4})([a-z]{2,})$/);
+        if (m) {
+          out.push(m[1], m[2]);
+          continue;
+        }
+        if (keepWords.has(tok)) out.push(tok);
+      }
+      return Array.from(new Set(out)).slice(0, 12);
+    })();
+
+    const hardFilter = (list: Product[]) => {
+      if (!strongTokens.length) return list;
+      const out: Product[] = [];
+      for (const p of list) {
+        const parts = [
+          typeof p?.name === "string" ? p.name : "",
+          typeof p?.category === "string" ? p.category : "",
+          typeof p?.brand === "string" ? p.brand : "",
+          typeof p?.description === "string" ? p.description : "",
+          ...(Array.isArray(p?.variations) ? p.variations.map((v) => (typeof v?.name === "string" ? v.name : "")) : []),
+        ];
+        const hay = parts
+          .join(" ")
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (!hay) continue;
+        const tokens = new Set(hay.split(" ").filter((x) => x));
+        let ok = true;
+        for (const s of strongTokens) {
+          if (!tokens.has(s)) {
+            ok = false;
+            break;
+          }
+        }
+        if (ok) out.push(p);
+      }
+      return out;
+    };
+
     const cfg = await getOpenRouterConfig();
     const aiTimeoutMs = openRouterTimeoutMsForModel(cfg.model) + 5_000;
 
@@ -1996,13 +2100,16 @@ export function createEllbot(deps: EllbotDeps) {
 
     const systemPrompt =
       `You are a WhatsApp product matching engine for ${args.storeName}.\n` +
-      `Your job is to FILTER the candidate results to only what truly fits the customer's request.\n\n` +
+      `Your job is to FILTER the candidate results to only what truly fits the customer's request.\n` +
+      `Be STRICT. If you are not confident a candidate matches, EXCLUDE it.\n\n` +
       `Return ONLY one line of JSON:\n` +
       `{ "keep_ids": number[] }\n\n` +
       `Rules:\n` +
       `- Only include IDs from the candidates list.\n` +
       `- Keep the best matches first.\n` +
-      `- Max 10 results.\n` +
+      `- Max 6 results.\n` +
+      `- If the customer specifies model/storage/specs (e.g. "iPhone 14 Pro 256GB"), ONLY keep exact matches.\n` +
+      `- If the customer specifies a brand, exclude other brands.\n` +
       `- If nothing fits, return an empty array.\n` +
       `- Do NOT include any other keys or text.\n`;
 
@@ -2014,12 +2121,12 @@ export function createEllbot(deps: EllbotDeps) {
       `Return JSON now.`;
 
     const resp = await withLocalTimeout(openRouterChatVendor(systemPrompt, userPrompt), aiTimeoutMs, "AI timed out.");
-    if (!resp.ok) return hits;
+    if (!resp.ok) return hardFilter(hits);
 
     const parsed = extractFirstJsonObject(resp.content ?? "");
-    if (!parsed || typeof parsed !== "object") return hits;
+    if (!parsed || typeof parsed !== "object") return hardFilter(hits);
     const keep_ids = Array.isArray((parsed as any).keep_ids) ? (parsed as any).keep_ids : null;
-    if (!keep_ids) return hits;
+    if (!keep_ids) return hardFilter(hits);
 
     const allowed = new Map<number, Product>();
     for (const p of hits) allowed.set(p.id, p);
@@ -2030,9 +2137,10 @@ export function createEllbot(deps: EllbotDeps) {
       const p = allowed.get(id);
       if (!p) continue;
       if (!out.includes(p)) out.push(p);
-      if (out.length >= 10) break;
+      if (out.length >= 6) break;
     }
-    return out;
+    const filteredOut = hardFilter(out);
+    return filteredOut.length ? filteredOut : out;
   }
 
   async function runAgenticTurn(args: {
