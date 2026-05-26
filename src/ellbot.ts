@@ -1833,17 +1833,20 @@ export function createEllbot(deps: EllbotDeps) {
         if (exactRe.test(catHay)) score += 20;
         if (exactRe.test(brandHay)) score += 100;
         if (exactRe.test(descHay)) score += 2;
+
+        const isIdentifier = /\d/.test(tok) || /^(xs|sm|md|lg|xl|xxl)$/i.test(tok);
+        if (isIdentifier) {
+          const inName = exactRe.test(nameHay);
+          const inBrand = exactRe.test(brandHay);
+          const inCat = exactRe.test(catHay);
+          const inVars =
+            Array.isArray(p.variations) &&
+            p.variations.some((v) => exactRe.test(((v as any)?.name ?? "").toString().toLowerCase()));
+          if (!inName && !inBrand && !inVars && !inCat) score -= 1000;
+        }
       }
 
       if (tokens.length > 1 && tokensFoundInName === tokens.length) score += 150;
-
-      const accessories = ["case", "cover", "charger", "cable", "protector", "screen", "dock", "earbud"];
-      const wantsAccessory = accessories.some((acc) => q.includes(acc));
-      if (!wantsAccessory) {
-        for (const acc of accessories) {
-          if (nameHay.includes(acc)) score -= 100;
-        }
-      }
 
       if (score > 0) scored.push({ p, score });
     }
@@ -1917,13 +1920,14 @@ export function createEllbot(deps: EllbotDeps) {
     const cfg = await getOpenRouterConfig();
     const aiTimeoutMs = openRouterTimeoutMsForModel(cfg.model) + 5_000;
     const systemPrompt =
-      `You are an elite WhatsApp sales agent for ${args.storeName}.\n` +
-      `Return ONLY one line of JSON with keys:\n` +
-      `query (string), brand (string|null), negative_keywords (string[]), min_price (number|null), max_price (number|null), intro_message (string).\n\n` +
+      `You are a shopping assistant for ${args.storeName}, a multi-vendor marketplace.\n` +
+      `Based on the conversation history, extract the exact search parameters the user is looking for.\n` +
+      `Respond ONLY with a raw JSON object matching this schema:\n` +
+      `{ "query": string, "brand": string|null, "negative_keywords": string[], "min_price": number|null, "max_price": number|null, "intro_message": string }\n\n` +
       `Rules:\n` +
-      `- If the user mentions a brand, set brand to that brand name (otherwise null).\n` +
-      `- If the user wants to browse or says "show me", set query to the most relevant product type/category from context.\n` +
-      `- negative_keywords must be an array (can be empty) to exclude accessories/irrelevant items for the context.\n` +
+      `- query: core product name (e.g., shirt, sneakers, phone).\n` +
+      `- brand: the specific brand name if mentioned, otherwise null.\n` +
+      `- negative_keywords: dynamically list accessories/parts to exclude (e.g. shoes -> laces, bed -> sheets, phone -> case). Must be an array (can be empty).\n` +
       `- intro_message must be brief.\n`;
     const history = agentMessagesFromSession(args.session, args.memoryTurns)
       .map((m) => `${m.role === "user" ? "Customer" : "Agent"}: ${m.content}`)
@@ -1964,118 +1968,18 @@ export function createEllbot(deps: EllbotDeps) {
     if (!input || !query) return hits;
 
     const strongTokens = (() => {
-      const t = input.toLowerCase();
-      const stop = new Set([
-        "i",
-        "me",
-        "want",
-        "need",
-        "show",
-        "some",
-        "any",
-        "the",
-        "a",
-        "an",
-        "and",
-        "or",
-        "for",
-        "with",
-        "please",
-        "looking",
-        "available",
-        "price",
-        "cost",
-        "buy",
-        "order",
-      ]);
+      const t = (input + " " + query).toLowerCase();
       const raw = t
         .replace(/[^a-z0-9\s]/g, " ")
         .split(/\s+/)
         .map((x) => x.trim())
-        .filter((x) => x && !stop.has(x))
-        .slice(0, 30);
+        .filter((x) => x)
+        .slice(0, 60);
       const out: string[] = [];
-      const keepWords = new Set([
-        "iphone",
-        "ipad",
-        "macbook",
-        "samsung",
-        "pixel",
-        "tecno",
-        "infinix",
-        "nokia",
-        "xiaomi",
-        "redmi",
-        "pro",
-        "max",
-        "mini",
-        "plus",
-        "ultra",
-        "xr",
-        "xs",
-        "se",
-        "air",
-        "note",
-        "laptop",
-        "pc",
-        "computer",
-        "starlink",
-        "kit",
-        "suit",
-        "men",
-        "women",
-        "boy",
-        "girl",
-        "female",
-        "male",
-        "child",
-        "kid",
-        "internet",
-        "router",
-        "watch",
-        "shoe",
-        "shoes",
-        "shirt",
-        "dress",
-        "bag",
-        "tv",
-        "television",
-        "headphone",
-        "headphones",
-        "earphone",
-        "earbuds",
-        "camera",
-        "perfume",
-        "cologne",
-        "sneaker",
-        "sneakers",
-        "hp",
-        "dell",
-        "lenovo",
-        "asus",
-        "acer",
-        "apple",
-        "nike",
-        "adidas",
-        "puma",
-      ]);
       for (const tok of raw) {
-        if (/^\d{1,4}$/.test(tok)) {
-          out.push(tok);
-          continue;
-        }
-        if (/^\d+gb$/.test(tok)) {
-          out.push(tok);
-          continue;
-        }
-        const m = tok.match(/^(\d{1,4})([a-z]{2,})$/);
-        if (m) {
-          out.push(m[1], m[2]);
-          continue;
-        }
-        if (keepWords.has(tok)) out.push(tok);
+        if (/\d/.test(tok) || /^(xs|sm|md|lg|xl|xxl)$/i.test(tok)) out.push(tok);
       }
-      return Array.from(new Set(out)).slice(0, 12);
+      return Array.from(new Set(out));
     })();
 
     const hardFilter = (list: Product[]) => {
@@ -2086,15 +1990,14 @@ export function createEllbot(deps: EllbotDeps) {
           typeof p?.name === "string" ? p.name : "",
           typeof p?.category === "string" ? p.category : "",
           typeof p?.brand === "string" ? p.brand : "",
-          typeof p?.description === "string" ? p.description : "",
           ...(Array.isArray(p?.variations) ? p.variations.map((v) => (typeof v?.name === "string" ? v.name : "")) : []),
         ];
-        const hay = parts.join(" ").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+        const hay = parts.join(" ").toLowerCase();
         if (!hay) continue;
-        const tokens = new Set(hay.split(" ").filter((x) => x));
         let ok = true;
         for (const s of strongTokens) {
-          if (!tokens.has(s)) {
+          const re = new RegExp(`\\b${s}\\b`, "i");
+          if (!re.test(hay)) {
             ok = false;
             break;
           }
@@ -2136,17 +2039,16 @@ export function createEllbot(deps: EllbotDeps) {
       .join("\n");
 
     const systemPrompt =
-      `You are a WhatsApp product matching engine for ${args.storeName}.\n` +
-      `Your job is to FILTER the candidate results to ONLY what truly fits the customer's request.\n` +
-      `Be EXTREMELY STRICT. If a candidate does not perfectly match the request, EXCLUDE IT.\n\n` +
+      `You are a universal marketplace product matching engine for ${args.storeName}.\n` +
+      `Your job is to FILTER candidate results to ONLY what truly fits the customer's request.\n\n` +
       `Return ONLY one line of JSON:\n` +
       `{ "keep_ids": number[] }\n\n` +
       `Rules:\n` +
       `- Only include IDs from the candidates list.\n` +
       `- Keep the best matches first (Max 6 results).\n` +
-      `- CRITICAL: If the candidate is a DIFFERENT product type, brand, or category than requested, you MUST EXCLUDE IT.\n` +
-      `- If the customer specifies a model/storage (e.g. "iPhone 14 Pro 256GB"), ONLY keep exact matches.\n` +
-      `- It is ALWAYS BETTER to return an empty array [] than to return unrelated products. If nothing fits perfectly, return [].\n` +
+      `- CRITICAL: If the candidate is a DIFFERENT product type, brand, or category than requested, EXCLUDE IT.\n` +
+      `- EXACT MODELS/SIZES: If the customer asks for a specific version/size/code (e.g. "13", "XL", "500ml", "256gb"), EXCLUDE any candidate that represents a different version.\n` +
+      `- It is ALWAYS BETTER to return an empty array [] than to return unrelated products.\n` +
       `- Do NOT include any other keys or text.\n`;
 
     const userPrompt =
@@ -2211,10 +2113,10 @@ export function createEllbot(deps: EllbotDeps) {
           parameters: {
             type: "object",
             properties: {
-              query: { type: "string", description: "The specific product or brand to search (e.g., 'iPhone', 'Nike', 'Toyota')." },
+              query: { type: "string", description: "The core product name they are looking for." },
               brand: {
                 type: "string",
-                description: "The specific brand requested by the user (e.g., 'Apple', 'Samsung', 'Nike'). Leave blank if no brand is specified.",
+                description: "The specific brand requested (e.g., 'Nike', 'Sony', 'Gucci'). Leave blank if not specified.",
               },
               negative_keywords: {
                 type: "array",
@@ -2237,7 +2139,7 @@ export function createEllbot(deps: EllbotDeps) {
     ];
 
     const systemInstruction =
-      `You are a friendly WhatsApp sales assistant for ${args.storeName}.\n` +
+      `You are a friendly WhatsApp sales assistant for ${args.storeName}, a multi-vendor marketplace.\n` +
       `Behavior Style: ${styleGuide}\n\n` +
       `STORE & DELIVERY INFO (YOU MAY USE THIS TO ANSWER QUESTIONS DIRECTLY):\n` +
       `${(args.storeFacts ?? "").trim() || "No extra store info provided."}\n\n` +
@@ -2245,7 +2147,7 @@ export function createEllbot(deps: EllbotDeps) {
       `CRITICAL INVENTORY RULES (YOU MUST OBEY):\n` +
       `1) YOU ARE BLIND TO INVENTORY: You DO NOT know what is actually in stock. You must NEVER assume. NEVER say "Yes, we have it" or "We sell those."\n` +
       `2) AVAILABILITY QUESTIONS: If a user asks "Do you have X?" or "Is Y available?", you MUST reply exactly like this: "I can check my system to see if we have [X] in stock! Would you like me to pull up the options for you?"\n` +
-      `3) BRAND NARROWING: If the user is vague ("I need a phone" / "Show me laptops"), ask their preferred brand (and/or budget) before offering to check the system.\n` +
+      `3) NARROW DOWN: If the user is vague (e.g. "Show me clothes"), ask 1 brief question to narrow down their preference (category, size, style, or brand) BEFORE offering to check the system.\n` +
       `4) SHOWING PRODUCTS: Only use the 'search_catalog' tool AFTER the user says "Yes" to letting you check, OR if they command you to show them ("Show me laptops").\n` +
       `5) NEVER list product names, options, or prices in plain text. Always rely on 'search_catalog' to render the WhatsApp UI.\n` +
       `6) KEEP IT SHORT: WhatsApp messages must be brief (1 to 3 sentences maximum).\n` +
