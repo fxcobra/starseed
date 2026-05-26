@@ -2083,10 +2083,10 @@ export function createEllbot(deps: EllbotDeps) {
       `{ "keep_ids": number[] }\n\n` +
       `Rules:\n` +
       `- Only include IDs from the candidates list.\n` +
-      `- Keep the best matches first (Max 6 results).\n` +
+      `- Keep the best matches first (Max 8 results).\n` +
       `- CRITICAL: If the candidate is a DIFFERENT product type, brand, or category than requested, EXCLUDE IT.\n` +
       `- EXACT MODELS/SIZES: If the customer asks for a specific version/size/code (e.g. "13", "XL", "500ml", "256gb"), EXCLUDE any candidate that represents a different version.\n` +
-      `- It is ALWAYS BETTER to return an empty array [] than to return unrelated products.\n` +
+      `- Prefer returning fewer results over adding weak/incorrect matches.\n` +
       `- Do NOT include any other keys or text.\n`;
 
     const userPrompt =
@@ -2113,13 +2113,13 @@ export function createEllbot(deps: EllbotDeps) {
       const p = allowed.get(id);
       if (!p) continue;
       if (!out.includes(p)) out.push(p);
-      if (out.length >= 6) break;
+      if (out.length >= 8) break;
     }
 
     const cfg2 = await getOpenRouterConfig();
     const aiTimeoutMs2 = openRouterTimeoutMsForModel(cfg2.model) + 5_000;
     const chosenCandidates = out
-      .slice(0, 6)
+      .slice(0, 8)
       .map((p) => {
         const parts: string[] = [];
         parts.push(`id=${p.id}`);
@@ -2146,9 +2146,10 @@ export function createEllbot(deps: EllbotDeps) {
       `{ "keep_ids": number[] }\n\n` +
       `Rules:\n` +
       `- Only include IDs from the provided candidates list.\n` +
-      `- Keep ONLY the products that clearly match the customer's request.\n` +
-      `- It is ALWAYS BETTER to return [] than to include an unrelated product.\n` +
-      `- Max 6 results.\n` +
+      `- Keep products that clearly match the customer's request.\n` +
+      `- If the request is broad/vague, keep the closest relevant matches (1–5).\n` +
+      `- Return [] only if nothing is relevant.\n` +
+      `- Max 8 results.\n` +
       `- Do NOT include any other keys or text.\n`;
 
     const validateUserPrompt =
@@ -2172,13 +2173,14 @@ export function createEllbot(deps: EllbotDeps) {
           const p = allow2.get(id);
           if (!p) continue;
           if (!out2.includes(p)) out2.push(p);
-          if (out2.length >= 6) break;
+          if (out2.length >= 8) break;
         }
         validated = out2;
       }
     }
 
     const filteredOut = hardFilter(validated);
+    if (!strongTokens.length && validated.length === 0 && out.length) return out;
     return strongTokens.length > 0 ? filteredOut : validated;
   }
 
