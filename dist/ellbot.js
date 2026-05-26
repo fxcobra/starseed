@@ -71,6 +71,10 @@ export async function fetchVendorBotConfig(vendorId) {
     const enabled = Boolean(manual?.enabled);
     const title = typeof manual?.title === "string" && manual.title.trim() ? manual.title.trim() : "Manual payment";
     const instructions = typeof manual?.instructions === "string" ? manual.instructions.trim() : "";
+    const payments = json?.payments;
+    const paystack = payments?.paystack;
+    const paystackEnabled = Boolean(paystack?.enabled);
+    const paystackConfigured = Boolean(paystack?.configured);
     const brain = json?.whatsappBotBrain;
     const brainStoreName = typeof brain?.storeName === "string" ? brain.storeName.trim() : "";
     const brainPhone = typeof brain?.shopPhone === "string" ? brain.shopPhone.trim() : "";
@@ -123,6 +127,7 @@ export async function fetchVendorBotConfig(vendorId) {
         },
         openrouter: { keys: Array.from(new Set(keys)).slice(0, 10), model },
         manualPayment: { enabled, title, instructions },
+        payments: { paystack: { enabled: paystackEnabled, configured: paystackConfigured } },
         whatsappBotBrain: {
             storeName: brainStoreName || vendorName || "Our Store",
             shopPhone: brainPhone,
@@ -368,6 +373,8 @@ export async function fetchProductsForVendor(vendorId) {
                     .map((x) => absolutizeMediaUrl(x));
                 if (!Number.isFinite(vid) || vid <= 0 || !vname)
                     continue;
+                if (typeof vPrice !== "number" || !Number.isFinite(vPrice) || vPrice <= 0)
+                    continue;
                 variations.push({ id: vid, name: vname, price: vPrice, images: vImgs });
             }
             const varPrices = variations
@@ -482,6 +489,8 @@ export async function fetchProductsForVendor(vendorId) {
                 .filter((x) => typeof x === "string" && x.trim() !== "")
                 .map((x) => absolutizeMediaUrl(x));
             if (!Number.isFinite(vid) || vid <= 0 || !vname)
+                continue;
+            if (typeof vPrice !== "number" || !Number.isFinite(vPrice) || vPrice <= 0)
                 continue;
             variations.push({ id: vid, name: vname, price: vPrice, images: vImgs });
         }
@@ -1576,17 +1585,19 @@ export function createEllbot(deps) {
                     score += 100;
                 if (exactRe.test(descHay))
                     score += 2;
+                const isIdentifier = /\d/.test(tok) || /^(xs|sm|md|lg|xl|xxl)$/i.test(tok);
+                if (isIdentifier) {
+                    const inName = exactRe.test(nameHay);
+                    const inBrand = exactRe.test(brandHay);
+                    const inCat = exactRe.test(catHay);
+                    const inVars = Array.isArray(p.variations) &&
+                        p.variations.some((v) => exactRe.test((v?.name ?? "").toString().toLowerCase()));
+                    if (!inName && !inBrand && !inVars && !inCat)
+                        score -= 1000;
+                }
             }
             if (tokens.length > 1 && tokensFoundInName === tokens.length)
                 score += 150;
-            const accessories = ["case", "cover", "charger", "cable", "protector", "screen", "dock", "earbud"];
-            const wantsAccessory = accessories.some((acc) => q.includes(acc));
-            if (!wantsAccessory) {
-                for (const acc of accessories) {
-                    if (nameHay.includes(acc))
-                        score -= 100;
-                }
-            }
             if (score > 0)
                 scored.push({ p, score });
         }
@@ -1664,16 +1675,55 @@ export function createEllbot(deps) {
             return true;
         return false;
     }
+    function looksLikePriceQuestion(text) {
+        const t = (text ?? "").toLowerCase();
+        if (!t.trim())
+            return false;
+        return /\b(price|prices|cost|how much|howmuch|rate|pricing)\b/.test(t);
+    }
+    function extractPriceQuery(text) {
+        const t = (text ?? "").toString().trim();
+        if (!t)
+            return "";
+        return t
+            .replace(/^(what'?s|what is|how much is|how much are|price of|prices of|cost of)\s+/i, "")
+            .replace(/\b(price|prices|cost|how much|howmuch|rate|pricing)\b/gi, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+    }
+    function buildPriceAnswer(products, maxProducts) {
+        const list = (Array.isArray(products) ? products : []).slice(0, Math.max(1, Math.min(5, maxProducts)));
+        if (!list.length)
+            return "";
+        const lines = [];
+        for (const p of list) {
+            const name = (p.name ?? "").toString().trim().slice(0, 60) || "Item";
+            const vs = Array.isArray(p.variations) ? p.variations : [];
+            const pricedVars = vs.filter((v) => typeof v?.price === "number" && Number.isFinite(v.price) && v.price > 0);
+            if (!pricedVars.length) {
+                lines.push(`• *${name}*: ${formatMoney(p.currency, Number.isFinite(p.price) ? p.price : 0)}`);
+                continue;
+            }
+            const min = Math.min(...pricedVars.map((v) => v.price));
+            lines.push(`• *${name}*: From ${formatMoney(p.currency, min)}`);
+            for (const v of pricedVars.slice(0, 6)) {
+                const vn = (v.name ?? "").toString().trim().slice(0, 40) || "Option";
+                lines.push(`   - ${vn}: ${formatMoney(p.currency, v.price)}`);
+            }
+        }
+        return lines.join("\n").slice(0, 950);
+    }
     async function aiPlanCatalogSearchNoTools(args) {
         const cfg = await getOpenRouterConfig();
         const aiTimeoutMs = openRouterTimeoutMsForModel(cfg.model) + 5_000;
-        const systemPrompt = `You are an elite WhatsApp sales agent for ${args.storeName}.\n` +
-            `Return ONLY one line of JSON with keys:\n` +
-            `query (string), brand (string|null), negative_keywords (string[]), min_price (number|null), max_price (number|null), intro_message (string).\n\n` +
+        const systemPrompt = `You are a shopping assistant for ${args.storeName}, a multi-vendor marketplace.\n` +
+            `Based on the conversation history, extract the exact search parameters the user is looking for.\n` +
+            `Respond ONLY with a raw JSON object matching this schema:\n` +
+            `{ "query": string, "brand": string|null, "negative_keywords": string[], "min_price": number|null, "max_price": number|null, "intro_message": string }\n\n` +
             `Rules:\n` +
-            `- If the user mentions a brand, set brand to that brand name (otherwise null).\n` +
-            `- If the user wants to browse or says "show me", set query to the most relevant product type/category from context.\n` +
-            `- negative_keywords must be an array (can be empty) to exclude accessories/irrelevant items for the context.\n` +
+            `- query: core product name (e.g., shirt, sneakers, phone).\n` +
+            `- brand: the specific brand name if mentioned, otherwise null.\n` +
+            `- negative_keywords: dynamically list accessories/parts to exclude (e.g. shoes -> laces, bed -> sheets, phone -> case). Must be an array (can be empty).\n` +
             `- intro_message must be brief.\n`;
         const history = agentMessagesFromSession(args.session, args.memoryTurns)
             .map((m) => `${m.role === "user" ? "Customer" : "Agent"}: ${m.content}`)
@@ -1701,6 +1751,196 @@ export function createEllbot(deps) {
             return null;
         return { query, brand: brand || null, negative_keywords, min_price, max_price, intro_message };
     }
+    async function aiRefineCatalogHits(args) {
+        const input = (args.input ?? "").trim();
+        const query = (args.query ?? "").trim();
+        const hits = Array.isArray(args.hits) ? args.hits : [];
+        if (!hits.length)
+            return hits;
+        if (!input || !query)
+            return hits;
+        const strongTokens = (() => {
+            const t = (input + " " + query).toLowerCase();
+            const raw = t
+                .replace(/[^a-z0-9\s]/g, " ")
+                .split(/\s+/)
+                .map((x) => x.trim())
+                .filter((x) => x)
+                .slice(0, 60);
+            const out = [];
+            for (const tok of raw) {
+                if (/\d/.test(tok) || /^(xs|sm|md|lg|xl|xxl)$/i.test(tok))
+                    out.push(tok);
+            }
+            return Array.from(new Set(out));
+        })();
+        const hardFilter = (list) => {
+            if (!strongTokens.length)
+                return list;
+            const out = [];
+            for (const p of list) {
+                const parts = [
+                    typeof p?.name === "string" ? p.name : "",
+                    typeof p?.category === "string" ? p.category : "",
+                    typeof p?.brand === "string" ? p.brand : "",
+                    ...(Array.isArray(p?.variations) ? p.variations.map((v) => (typeof v?.name === "string" ? v.name : "")) : []),
+                ];
+                const hay = parts.join(" ").toLowerCase();
+                if (!hay)
+                    continue;
+                let ok = true;
+                for (const s of strongTokens) {
+                    const re = new RegExp(`\\b${s}\\b`, "i");
+                    if (!re.test(hay)) {
+                        ok = false;
+                        break;
+                    }
+                }
+                if (ok)
+                    out.push(p);
+            }
+            return out;
+        };
+        const cfg = await getOpenRouterConfig();
+        const aiTimeoutMs = openRouterTimeoutMsForModel(cfg.model) + 5_000;
+        const history = agentMessagesFromSession(args.session, args.memoryTurns)
+            .map((m) => `${m.role === "user" ? "Customer" : "Agent"}: ${m.content}`)
+            .join("\n")
+            .trim();
+        const candidates = hits
+            .slice(0, 15)
+            .map((p) => {
+            const parts = [];
+            parts.push(`id=${p.id}`);
+            parts.push(`name=${(p.name ?? "").toString().trim().slice(0, 120)}`);
+            const cat = (p.category ?? "").toString().trim();
+            if (cat)
+                parts.push(`category=${cat.slice(0, 60)}`);
+            const brand = (p.brand ?? "").toString().trim();
+            if (brand)
+                parts.push(`brand=${brand.slice(0, 60)}`);
+            parts.push(`price=${formatMoney(p.currency, Number.isFinite(p.price) ? p.price : 0)}`);
+            const vs = Array.isArray(p.variations) ? p.variations : [];
+            const vnames = vs
+                .map((v) => (typeof v?.name === "string" ? v.name.trim() : ""))
+                .filter((x) => x)
+                .slice(0, 10);
+            if (vnames.length)
+                parts.push(`variations=${vnames.join(", ")}`);
+            const desc = (p.description ?? "").toString().trim();
+            if (desc)
+                parts.push(`desc=${desc.slice(0, 140)}`);
+            return `- ${parts.join(" | ")}`;
+        })
+            .join("\n");
+        const systemPrompt = `You are a universal marketplace product matching engine for ${args.storeName}.\n` +
+            `Your job is to FILTER candidate results to ONLY what truly fits the customer's request.\n\n` +
+            `Return ONLY one line of JSON:\n` +
+            `{ "keep_ids": number[] }\n\n` +
+            `Rules:\n` +
+            `- Only include IDs from the candidates list.\n` +
+            `- Keep the best matches first (Max 6 results).\n` +
+            `- CRITICAL: If the candidate is a DIFFERENT product type, brand, or category than requested, EXCLUDE IT.\n` +
+            `- EXACT MODELS/SIZES: If the customer asks for a specific version/size/code (e.g. "13", "XL", "500ml", "256gb"), EXCLUDE any candidate that represents a different version.\n` +
+            `- It is ALWAYS BETTER to return an empty array [] than to return unrelated products.\n` +
+            `- Do NOT include any other keys or text.\n`;
+        const userPrompt = `${history ? `Conversation:\n${history}\n\n` : ""}` +
+            `Customer request: ${input}\n` +
+            `Search query used: ${query}\n\n` +
+            `Candidates:\n${candidates}\n\n` +
+            `Return JSON now.`;
+        const resp = await withLocalTimeout(openRouterChatVendor(systemPrompt, userPrompt), aiTimeoutMs, "AI timed out.");
+        if (!resp.ok)
+            return hardFilter(hits);
+        const parsed = extractFirstJsonObject(resp.content ?? "");
+        if (!parsed || typeof parsed !== "object")
+            return hardFilter(hits);
+        const keep_ids = Array.isArray(parsed.keep_ids) ? parsed.keep_ids : null;
+        if (!keep_ids)
+            return hardFilter(hits);
+        const allowed = new Map();
+        for (const p of hits)
+            allowed.set(p.id, p);
+        const out = [];
+        for (const raw of keep_ids) {
+            const id = typeof raw === "number" ? raw : Number(raw);
+            if (!Number.isFinite(id))
+                continue;
+            const p = allowed.get(id);
+            if (!p)
+                continue;
+            if (!out.includes(p))
+                out.push(p);
+            if (out.length >= 6)
+                break;
+        }
+        const cfg2 = await getOpenRouterConfig();
+        const aiTimeoutMs2 = openRouterTimeoutMsForModel(cfg2.model) + 5_000;
+        const chosenCandidates = out
+            .slice(0, 6)
+            .map((p) => {
+            const parts = [];
+            parts.push(`id=${p.id}`);
+            parts.push(`name=${(p.name ?? "").toString().trim().slice(0, 120)}`);
+            const cat = (p.category ?? "").toString().trim();
+            if (cat)
+                parts.push(`category=${cat.slice(0, 60)}`);
+            const brand = (p.brand ?? "").toString().trim();
+            if (brand)
+                parts.push(`brand=${brand.slice(0, 60)}`);
+            parts.push(`price=${formatMoney(p.currency, Number.isFinite(p.price) ? p.price : 0)}`);
+            const vs = Array.isArray(p.variations) ? p.variations : [];
+            const vnames = vs
+                .map((v) => (typeof v?.name === "string" ? v.name.trim() : ""))
+                .filter((x) => x)
+                .slice(0, 10);
+            if (vnames.length)
+                parts.push(`variations=${vnames.join(", ")}`);
+            return `- ${parts.join(" | ")}`;
+        })
+            .join("\n");
+        const validateSystemPrompt = `You are a universal marketplace product validator for ${args.storeName}.\n` +
+            `Your job is to REMOVE unrelated products from a short candidate list.\n\n` +
+            `Return ONLY one line of JSON:\n` +
+            `{ "keep_ids": number[] }\n\n` +
+            `Rules:\n` +
+            `- Only include IDs from the provided candidates list.\n` +
+            `- Keep ONLY the products that clearly match the customer's request.\n` +
+            `- It is ALWAYS BETTER to return [] than to include an unrelated product.\n` +
+            `- Max 6 results.\n` +
+            `- Do NOT include any other keys or text.\n`;
+        const validateUserPrompt = `Customer request: ${input}\n` +
+            `Search query used: ${query}\n\n` +
+            `Candidates:\n${chosenCandidates}\n\n` +
+            `Return JSON now.`;
+        const validateResp = await withLocalTimeout(openRouterChatVendor(validateSystemPrompt, validateUserPrompt), aiTimeoutMs2, "AI timed out.");
+        let validated = out;
+        if (validateResp.ok) {
+            const parsed2 = extractFirstJsonObject(validateResp.content ?? "");
+            const keep2 = parsed2 && typeof parsed2 === "object" && Array.isArray(parsed2.keep_ids) ? parsed2.keep_ids : null;
+            if (keep2) {
+                const allow2 = new Map();
+                for (const p of out)
+                    allow2.set(p.id, p);
+                const out2 = [];
+                for (const raw of keep2) {
+                    const id = typeof raw === "number" ? raw : Number(raw);
+                    if (!Number.isFinite(id))
+                        continue;
+                    const p = allow2.get(id);
+                    if (!p)
+                        continue;
+                    if (!out2.includes(p))
+                        out2.push(p);
+                    if (out2.length >= 6)
+                        break;
+                }
+                validated = out2;
+            }
+        }
+        const filteredOut = hardFilter(validated);
+        return strongTokens.length > 0 ? filteredOut : validated;
+    }
     async function runAgenticTurn(args) {
         const cfg = await getOpenRouterConfig();
         const aiTimeoutMs = openRouterTimeoutMsForModel(cfg.model) + 5_000;
@@ -1718,10 +1958,10 @@ export function createEllbot(deps) {
                     parameters: {
                         type: "object",
                         properties: {
-                            query: { type: "string", description: "The specific product or brand to search (e.g., 'iPhone', 'Nike', 'Toyota')." },
+                            query: { type: "string", description: "The core product name they are looking for." },
                             brand: {
                                 type: "string",
-                                description: "The specific brand requested by the user (e.g., 'Apple', 'Samsung', 'Nike'). Leave blank if no brand is specified.",
+                                description: "The specific brand requested (e.g., 'Nike', 'Sony', 'Gucci'). Leave blank if not specified.",
                             },
                             negative_keywords: {
                                 type: "array",
@@ -1740,7 +1980,7 @@ export function createEllbot(deps) {
                 },
             },
         ];
-        const systemInstruction = `You are a friendly WhatsApp sales assistant for ${args.storeName}.\n` +
+        const systemInstruction = `You are a friendly WhatsApp sales assistant for ${args.storeName}, a multi-vendor marketplace.\n` +
             `Behavior Style: ${styleGuide}\n\n` +
             `STORE & DELIVERY INFO (YOU MAY USE THIS TO ANSWER QUESTIONS DIRECTLY):\n` +
             `${(args.storeFacts ?? "").trim() || "No extra store info provided."}\n\n` +
@@ -1748,7 +1988,7 @@ export function createEllbot(deps) {
             `CRITICAL INVENTORY RULES (YOU MUST OBEY):\n` +
             `1) YOU ARE BLIND TO INVENTORY: You DO NOT know what is actually in stock. You must NEVER assume. NEVER say "Yes, we have it" or "We sell those."\n` +
             `2) AVAILABILITY QUESTIONS: If a user asks "Do you have X?" or "Is Y available?", you MUST reply exactly like this: "I can check my system to see if we have [X] in stock! Would you like me to pull up the options for you?"\n` +
-            `3) BRAND NARROWING: If the user is vague ("I need a phone" / "Show me laptops"), ask their preferred brand (and/or budget) before offering to check the system.\n` +
+            `3) NARROW DOWN: If the user is vague (e.g. "Show me clothes"), ask 1 brief question to narrow down their preference (category, size, style, or brand) BEFORE offering to check the system.\n` +
             `4) SHOWING PRODUCTS: Only use the 'search_catalog' tool AFTER the user says "Yes" to letting you check, OR if they command you to show them ("Show me laptops").\n` +
             `5) NEVER list product names, options, or prices in plain text. Always rely on 'search_catalog' to render the WhatsApp UI.\n` +
             `6) KEEP IT SHORT: WhatsApp messages must be brief (1 to 3 sentences maximum).\n` +
@@ -1768,6 +2008,16 @@ export function createEllbot(deps) {
                             max: planned.max_price,
                             negativeKeywords: planned.negative_keywords,
                         });
+                        if (hits.length) {
+                            hits = await aiRefineCatalogHits({
+                                session: args.session,
+                                input: args.input,
+                                query: planned.query,
+                                storeName: args.storeName,
+                                hits,
+                                memoryTurns: args.memoryTurns,
+                            });
+                        }
                         if (hits.length) {
                             args.session.lastProductTopic = planned.query;
                             const intro = (planned.intro_message || `Here are some options for *${planned.query}*:`).slice(0, 300);
@@ -1799,6 +2049,16 @@ export function createEllbot(deps) {
                             max: planned.max_price,
                             negativeKeywords: planned.negative_keywords,
                         });
+                        if (hits.length) {
+                            hits = await aiRefineCatalogHits({
+                                session: args.session,
+                                input: args.input,
+                                query: queryToSearch,
+                                storeName: args.storeName,
+                                hits,
+                                memoryTurns: args.memoryTurns,
+                            });
+                        }
                         if (hits.length) {
                             args.session.lastProductTopic = (planned.query || planned.brand || "products").slice(0, 80);
                             const intro = (planned.intro_message || `Here are the options I found:`).slice(0, 300);
@@ -1850,6 +2110,16 @@ export function createEllbot(deps) {
                     negativeKeywords,
                 })
                 : [];
+            if (hits.length) {
+                hits = await aiRefineCatalogHits({
+                    session: args.session,
+                    input: args.input,
+                    query: queryToSearch,
+                    storeName: args.storeName,
+                    hits,
+                    memoryTurns: args.memoryTurns,
+                });
+            }
             if (hits.length) {
                 if (queryToSearch)
                     args.session.lastProductTopic = queryToSearch;
@@ -1916,7 +2186,7 @@ export function createEllbot(deps) {
         if (!vs.length)
             return `*${formatMoney(product.currency, product.price)}*`;
         const prices = vs
-            .map((v) => (typeof v.price === "number" && Number.isFinite(v.price) ? v.price : null))
+            .map((v) => (typeof v.price === "number" && Number.isFinite(v.price) && v.price > 0 ? v.price : null))
             .filter((x) => typeof x === "number");
         if (!prices.length)
             return `*${formatMoney(product.currency, product.price)}*`;
@@ -1937,12 +2207,21 @@ export function createEllbot(deps) {
             `*Total:* ${formatMoney(cart.product.currency, total)}\n\n` +
             `Please tap a payment method below:`).slice(0, 1024);
         const media = await prepareImageMedia(cart.image_url || cart.product.image_url, cart.title, "Payment media prepare timed out.");
-        const allButtons = [
-            { name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Paystack Link", id: "PAY_LINK" }) },
-            { name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Direct MoMo", id: "PAY_DIRECT" }) },
-            { name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Call to Order", id: "PAY_MANUAL" }) },
-            { name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Cancel Order", id: "CANCEL_CHECKOUT" }) },
-        ];
+        const cfg = await fetchVendorBotConfig(deps.vendorId);
+        const canPaystack = Boolean(cfg?.payments?.paystack?.configured);
+        const canManual = Boolean(cfg?.manualPayment?.enabled);
+        const allButtons = [];
+        if (canPaystack) {
+            allButtons.push({ name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Paystack Link", id: "PAY_LINK" }) });
+            allButtons.push({ name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Direct MoMo", id: "PAY_DIRECT" }) });
+        }
+        if (canManual) {
+            allButtons.push({ name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Manual payment", id: "PAY_MANUAL" }) });
+        }
+        else {
+            allButtons.push({ name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Call to Order", id: "PAY_MANUAL" }) });
+        }
+        allButtons.push({ name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Cancel Order", id: "CANCEL_CHECKOUT" }) });
         for (let i = 0; i < allButtons.length; i += 3) {
             const chunk = allButtons.slice(i, i + 3);
             const isFirst = i === 0;
@@ -2700,10 +2979,6 @@ export function createEllbot(deps) {
     }
     async function sendProductDetails(to, product) {
         const hasVars = Array.isArray(product.variations) && product.variations.length > 0;
-        if (hasVars) {
-            await sendVariationPicker(to, product, 0);
-            return;
-        }
         const used = (product.image_url ?? "").trim();
         const remainingImages = (Array.isArray(product.images) ? product.images : [])
             .map((x) => (typeof x === "string" ? x.trim() : ""))
@@ -2759,7 +3034,17 @@ export function createEllbot(deps) {
             }
         }
         const media = await prepareImageMedia(product.image_url, product.name, "Product media prepare timed out.");
-        const safeDesc = (product.description ?? "").slice(0, 800);
+        const safeDesc = (product.description ?? "").slice(0, 620);
+        const vs = Array.isArray(product.variations) ? product.variations : [];
+        const pricedVars = vs
+            .filter((v) => typeof v?.price === "number" && Number.isFinite(v.price) && v.price > 0)
+            .sort((a, b) => (a.price !== b.price ? a.price - b.price : (a.name ?? "").localeCompare(b.name ?? "")))
+            .slice(0, 10);
+        const variationsText = hasVars && pricedVars.length
+            ? `\n\n*Options & Prices*\n${pricedVars
+                .map((v) => `• ${(v.name ?? "").toString().trim().slice(0, 40) || "Option"}: ${formatMoney(product.currency, v.price)}`)
+                .join("\n")}`
+            : "";
         const msg = deps.generateWAMessageFromContent(to, {
             viewOnceMessage: {
                 message: {
@@ -2767,12 +3052,18 @@ export function createEllbot(deps) {
                     interactiveMessage: {
                         header: { title: "", hasMediaAttachment: true, ...media },
                         body: {
-                            text: `*${product.name.trim().slice(0, 60)}*\n\n💰 *Price:* ${formatMoney(product.currency, product.price)}\n\n${safeDesc}`.slice(0, 1024),
+                            text: `*${product.name.trim().slice(0, 60)}*\n\n💰 ${productPriceLabel(product)}\n\n${safeDesc}${variationsText}`.slice(0, 1024),
                         },
                         footer: { text: "EllTek" },
                         nativeFlowMessage: {
                             buttons: [
-                                { name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Buy Now", id: `BUY ${product.id}` }) },
+                                {
+                                    name: "quick_reply",
+                                    buttonParamsJson: JSON.stringify({
+                                        display_text: hasVars ? "Options" : "Buy Now",
+                                        id: `BUY ${product.id}`,
+                                    }),
+                                },
                                 { name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Catalog", id: "SHOW_CATALOG" }) },
                             ],
                         },
@@ -3150,7 +3441,7 @@ export function createEllbot(deps) {
                 if (!lastNudge || nowMs() - lastNudge > 2 * 60_000 || session.lastNudgeSig !== sig) {
                     session.lastNudgeAt = nowMs();
                     session.lastNudgeSig = sig;
-                    const nudge = `Hi 👋 What are you looking for?\nExample: *gaming phone under 2500* or *iphone 13*.\n\nTap Menu to browse.`;
+                    const nudge = `Hi 👋 What are you looking for?\n\n\nYou can ask me directly or tap Menu to browse directly.`;
                     await sendMenuAndRemember(to, session, nudge, storeName);
                     scheduleSave();
                     return;
@@ -3394,6 +3685,10 @@ export function createEllbot(deps) {
             return;
         }
         if (upperText === "PAY_LINK") {
+            if (!vendorCfg?.payments?.paystack?.configured) {
+                await sendWithMenu(to, session, "Paystack payment is not available for this store right now. Please select Manual payment.", storeName);
+                return;
+            }
             if (await maybeTriggerHandoff(to, session, vendorCfg, storeName, "before_payment", {
                 title: session.cart?.title ?? "",
                 product_id: session.cart?.product?.id ?? null,
@@ -3512,7 +3807,10 @@ export function createEllbot(deps) {
             }
             catch (e) {
                 deps.onError(e instanceof Error ? e.message : "MoMo charge failed.");
-                await sendWithMenu(to, session, "❌ Direct MoMo charge failed. Please use the Paystack Link option instead (or tap Menu to browse).", storeName);
+                const canPaystack = Boolean(vendorCfg?.payments?.paystack?.configured);
+                await sendWithMenu(to, session, canPaystack
+                    ? "❌ Direct MoMo charge failed. Please use the Paystack Link option instead (or tap Menu to browse)."
+                    : "❌ Direct MoMo charge failed. Please use Manual payment instead (or tap Menu to browse).", storeName);
             }
             return;
         }
@@ -3817,6 +4115,21 @@ export function createEllbot(deps) {
             storeFactsParts.push(`Manual payment: ${t}${instr ? ` — ${instr.slice(0, 500)}` : ""}`);
         }
         const storeFacts = storeFactsParts.join("\n").trim();
+        if (looksLikePriceQuestion(text)) {
+            const q = extractPriceQuery(text) || (session.lastProductTopic ?? "").trim();
+            if (!q) {
+                await sendText(to, "Which item should I price for you?");
+                return;
+            }
+            const hits = await smartSearch(q, deps.vendorId, products, {});
+            if (!hits.length) {
+                await sendWithMenu(to, session, `I couldn't find an exact match for *${q}*. Tap Menu to browse.`, storeName);
+                return;
+            }
+            const answer = buildPriceAnswer(hits, 4);
+            await sendText(to, (`💰 *Prices*\n\n${answer}\n\nWant me to show the product cards? Tap Menu.`).slice(0, 1024));
+            return;
+        }
         await runAgenticTurn({
             to,
             session,

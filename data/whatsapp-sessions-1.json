@@ -1,60 +1,182 @@
 {
   "v": 1,
-  "savedAt": 1779575865389,
+  "savedAt": 1779805233459,
   "sessions": {
+    "271347544494286@lid": {
+      "lastAt": 1779805232253,
+      "state": "chat",
+      "email": "buzinezz1379@gmail.com",
+      "momoNumber": "0551234987",
+      "lastReference": "PSK_20260519191938_a5d71183",
+      "greetedAt": 1779788222363,
+      "lastNudgeAt": 1779788534605,
+      "lastNudgeSig": "greet_nudge",
+      "aiFallbackAt": 1779650951905,
+      "deliveryAddress": "Kumasi Santasi",
+      "history": [
+        {
+          "dir": "in",
+          "text": "Pls use my Channel to see available items and prices \n\n\nhttps://whatsapp.com/channel/0029VaY8FYUHrDZdD7cDno3i",
+          "at": 1779788281439
+        },
+        {
+          "dir": "out",
+          "text": "I'm unable to access external links or channels. However, I can help you check our inventory here! Just let me know what you're looking for.",
+          "at": 1779788284578
+        },
+        {
+          "dir": "in",
+          "text": "Hi",
+          "at": 1779788533821
+        },
+        {
+          "dir": "out",
+          "text": "Hi 👋 What are you looking for?\nExample: *gaming phone under 2500* or *iphone 13*.\n\nTap Menu to browse.",
+          "at": 1779788534622
+        },
+        {
+          "dir": "in",
+          "text": "I want a starlink Mini kit",
+          "at": 1779788674233
+        },
+        {
+          "dir": "out",
+          "text": "I can check my system to see if we have a Starlink Mini kit in stock! Would you like me to pull up the options for you?",
+          "at": 1779788679653
+        },
+        {
+          "dir": "in",
+          "text": "Yes please",
+          "at": 1779788687475
+        },
+        {
+          "dir": "out",
+          "text": "I checked the system, here are the options we have!",
+          "at": 1779788697025
+        },
+        {
+          "dir": "in",
+          "text": "I want a starlink Mini Router",
+          "at": 1779788738888
+        },
+        {
+          "dir": "out",
+          "text": "I can check my system to see if we have a Starlink Mini Router in stock! Would you like me to pull up the options for you?",
+          "at": 1779788742841
+        },
+        {
+          "dir": "in",
+          "text": "Yeah",
+          "at": 1779788747116
+        },
+        {
+          "dir": "out",
+          "text": "I checked the system, here are the options we have!",
+          "at": 1779788752747
+        },
+        {
+          "dir": "in",
+          "text": "Hi 👋🏽",
+          "at": 1779805040974
+        },
+        {
+          "dir": "out",
+          "text": "Hi there! 👋🏽 What can I assist you with today?",
+          "at": 1779805048053
+        },
+        {
+          "dir": "in",
+          "text": "How much is iPhone 13 128?",
+          "at": 1779805052285
+        },
+        {
+          "dir": "in",
+          "text": "I want iPhone 13",
+          "at": 1779805074153
+        },
+        {
+          "dir": "out",
+          "text": "I can check my system to see if we have the iPhone 13 in stock! Would you like me to pull up the options for you?",
+          "at": 1779805076291
+        },
+        {
+          "dir": "in",
+          "text": "Ok",
+          "at": 1779805080339
+        },
+        {
+          "dir": "out",
+          "text": "I couldn't find any exact matches for *iPhone 13*. Tap Menu to browse.",
+          "at": 1779805085053
+        },
+        {
+          "dir": "in",
+          "text": "I want a starlink Mini kit",
+          "at": 1779805104858
+        },
+        {
+          "dir": "out",
+          "text": "I can check my system to see if we have a Starlink Mini Kit in stock! Would you like me to pull up the options for you?",
+          "at": 1779805108551
+        },
+        {
+          "dir": "in",
+          "text": "Ok",
+          "at": 1779805112750
+        },
+        {
+          "dir": "out",
+          "text": "I checked the system, here are the options for the Starlink Mini Kit!",
+          "at": 1779805119505
+        },
+        {
+          "dir": "in",
+          "text": "I want a starlink Mini Router",
+          "at": 1779805153470
+        },
+        {
+          "dir": "out",
+          "text": "I can check my system to see if we have a Starlink Mini Router in stock! Would you like me to pull up the options for you?",
+          "at": 1779805156776
+        },
+        {
+          "dir": "in",
+          "text": "Ok",
+          "at": 1779805160768
+        },
+        {
+          "dir": "out",
+          "text": "I checked the system, here are the options for the Starlink Mini Router!",
+          "at": 1779805166108
+        },
+        {
+          "dir": "in",
+          "text": "How much is starlink Standard Kit?",
+          "at": 1779805203878
+        },
+        {
+          "dir": "in",
+          "text": "Ok",
+          "at": 1779805214839
+        },
+        {
+          "dir": "out",
+          "text": "Here are the options for the Starlink Mini Router.",
+          "at": 1779805232253
+        }
+      ],
+      "lastProductTopic": "Starlink Mini Router",
+      "lastResultsMinPrice": 52.8,
+      "lastResultsCategory": "Phones"
+    },
     "120363159552753674@newsletter": {
-      "lastAt": 1779575864182,
+      "lastAt": 1779788438991,
       "state": "chat",
       "greetedAt": 0,
       "lastNudgeAt": 0,
       "lastNudgeSig": "",
-      "aiFallbackAt": 1779564993874,
+      "aiFallbackAt": 1779650718312,
       "history": [
-        {
-          "dir": "out",
-          "text": "Camavinga's milestone is indeed noteworthy! How can I assist you today? Are you interested in any specific products or services related to football or Real Madrid?",
-          "at": 1779063246099
-        },
-        {
-          "dir": "in",
-          "text": "⚽ Vini Jr. ⚽",
-          "at": 1779178964449
-        },
-        {
-          "dir": "out",
-          "text": "Are you looking for products or information related to Vini Jr.? Let me know how I can assist you!",
-          "at": 1779178969484
-        },
-        {
-          "dir": "in",
-          "text": "🔙 28 years since winning the seventh European Cup.\n🏆 Hace 28 años se ganó la séptima Copa de Europa.",
-          "at": 1779265593544
-        },
-        {
-          "dir": "out",
-          "text": "That's a significant anniversary for Real Madrid! How can I assist you today? Are you looking for any specific products or memorabilia related to this achievement?",
-          "at": 1779265600852
-        },
-        {
-          "dir": "in",
-          "text": "LA SÉPTIMA. \n20/05/1998",
-          "at": 1779279820490
-        },
-        {
-          "dir": "out",
-          "text": "The seventh European Cup win on May 20, 1998, is a historic moment for Real Madrid! How can I assist you today? Are you interested in any specific products or services related to this event?",
-          "at": 1779279828209
-        },
-        {
-          "dir": "in",
-          "text": "🟠🔛🟣",
-          "at": 1779300614127
-        },
-        {
-          "dir": "in",
-          "text": "🙌 Juvenil A is looking for a spot in the Copa de Campeones final 🆚 Granada!\n💪 ¡El Juvenil A busca llegar a la final de la Copa de Campeones 🆚 Granada!\n🔴 LIVE | YA EN DIRECTO ▶️ RM Play & RMTV\n🔗 play.realmadrid.com/browse",
-          "at": 1779301686936
-        },
         {
           "dir": "in",
           "text": "🔥⚽🔛",
@@ -159,175 +281,216 @@
           "dir": "out",
           "text": "Carvajal's statements must be heartfelt! If you're interested in any merchandise or products related to him or Real Madrid, just let me know!",
           "at": 1779575864182
+        },
+        {
+          "dir": "in",
+          "text": "🎙️ Alaba 🎙️\n📺 Full statements | Declaraciones completas ▶️ RM Play\n🔗 https://play.realmadrid.com/playlist/35715?u=w",
+          "at": 1779617626554
+        },
+        {
+          "dir": "in",
+          "text": "🏆 26 years since our Eighth European Cup! \n🔙 ¡Se cumplen 26 años de la Octava!",
+          "at": 1779627448137
+        },
+        {
+          "dir": "in",
+          "text": "LA OCTAVA.\n24/05/2000",
+          "at": 1779636171172
+        },
+        {
+          "dir": "in",
+          "text": "🏆 The Décima turns twelve!\n🔙 ¡Se cumplen doce años de la Décima!",
+          "at": 1779642448966
+        },
+        {
+          "dir": "in",
+          "text": "LA DÉCIMA. \n24/05/2014",
+          "at": 1779650711422
+        },
+        {
+          "dir": "in",
+          "text": "😢 Not a dry eye in the house.\n✨ Imposible no emocionarse...\n📺 Full video 🔗 https://play.realmadrid.com/interstitial/962970?u=w",
+          "at": 1779788322294
+        },
+        {
+          "dir": "out",
+          "text": "Those moments are truly unforgettable! If you're looking for any memorabilia or products related to these historic events, just let me know!",
+          "at": 1779788324340
+        },
+        {
+          "dir": "in",
+          "text": "🏆 ¡Octavo aniversario de la Decimotercera!\n🙌 Eighth anniversary of the Decimotercera!",
+          "at": 1779788433134
+        },
+        {
+          "dir": "out",
+          "text": "What a milestone! If you want to celebrate with some Real Madrid gear or have any questions about products, feel free to ask!",
+          "at": 1779788438991
         }
       ]
     },
-    "271347544494286@lid": {
-      "lastAt": 1779565605783,
+    "206725953146910@lid": {
+      "lastAt": 1779788258545,
       "state": "chat",
-      "email": "buzinezz1379@gmail.com",
-      "momoNumber": "0551234987",
-      "lastReference": "PSK_20260519191938_a5d71183",
-      "greetedAt": 1779561334218,
-      "lastNudgeAt": 1779565598966,
-      "lastNudgeSig": "greet_nudge",
-      "aiFallbackAt": 1779565564231,
-      "deliveryAddress": "Kumasi Santasi",
+      "greetedAt": 1779788256078,
+      "lastNudgeAt": 0,
+      "lastNudgeSig": "",
       "history": [
         {
           "dir": "in",
-          "text": "High Performance Access Point \n300meters\n2700",
-          "at": 1779561554469
-        },
-        {
-          "dir": "in",
-          "text": "220",
-          "at": 1779561554469
-        },
-        {
-          "dir": "in",
-          "text": "300",
-          "at": 1779561554469
-        },
-        {
-          "dir": "in",
-          "text": "Mobile MiFi\n250",
-          "at": 1779561554835
-        },
-        {
-          "dir": "in",
-          "text": "700",
-          "at": 1779561555443
-        },
-        {
-          "dir": "in",
-          "text": "800",
-          "at": 1779561555590
-        },
-        {
-          "dir": "in",
-          "text": "500",
-          "at": 1779561555806
-        },
-        {
-          "dir": "in",
-          "text": "1000",
-          "at": 1779561555966
-        },
-        {
-          "dir": "in",
-          "text": "400",
-          "at": 1779561555966
-        },
-        {
-          "dir": "in",
-          "text": "Starlink Mini DC to DC cable \n30 meters\n450",
-          "at": 1779561556107
-        },
-        {
-          "dir": "in",
-          "text": "Starlink Mini Ethernet cable \n15 meters\n300",
-          "at": 1779561556250
-        },
-        {
-          "dir": "in",
-          "text": "Starlink Gen 3 Mesh Router\n\n1400",
-          "at": 1779561556408
-        },
-        {
-          "dir": "in",
-          "text": "Starlink Gen 3 150meters Standard Cable\n\n1300",
-          "at": 1779561556542
-        },
-        {
-          "dir": "in",
-          "text": "Gen 3 150meters Standard Cable\n\n1100",
-          "at": 1779561556966
-        },
-        {
-          "dir": "in",
-          "text": "Starlink Mini Router\n1000",
-          "at": 1779561557106
-        },
-        {
-          "dir": "in",
-          "text": "850",
-          "at": 1779561557106
-        },
-        {
-          "dir": "in",
-          "text": "Starlink Standard Mount \n700",
-          "at": 1779561557501
-        },
-        {
-          "dir": "in",
-          "text": "Starlink Gen 3 Mesh Router only\n\n1100",
-          "at": 1779561557800
-        },
-        {
-          "dir": "in",
-          "text": "Gen 3 original 15 meters cable \n\n700",
-          "at": 1779561557801
-        },
-        {
-          "dir": "in",
-          "text": "Gen 3 Power Brick\n1500",
-          "at": 1779561558039
-        },
-        {
-          "dir": "in",
-          "text": "Starlink Standard Kit\n5000",
-          "at": 1779561558316
-        },
-        {
-          "dir": "in",
-          "text": "Starlink Mini Kit\n2700",
-          "at": 1779561558317
-        },
-        {
-          "dir": "in",
-          "text": "Mikrotik Router\n2200",
-          "at": 1779561558610
-        },
-        {
-          "dir": "in",
-          "text": "Bot responding to old messages when offline",
-          "at": 1779562851624
-        },
-        {
-          "dir": "in",
-          "text": "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",
-          "at": 1779565559155
-        },
-        {
-          "dir": "in",
-          "text": "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",
-          "at": 1779565564068
-        },
-        {
-          "dir": "in",
-          "text": "Hi",
-          "at": 1779565598150
+          "text": "Eii you are alive ?",
+          "at": 1779788210042
         },
         {
           "dir": "out",
-          "text": "Hi 👋 What are you looking for?\nExample: *gaming phone under 2500* or *iphone 13*.\n\nTap Menu to browse.",
-          "at": 1779565599000
+          "text": "Hello! Yes, I'm here to help you. What can I assist you with today?",
+          "at": 1779788238998
         },
         {
           "dir": "in",
-          "text": "Xup",
-          "at": 1779565603750
+          "text": "Herrrr",
+          "at": 1779788253384
+        },
+        {
+          "dir": "in",
+          "text": "Ellorm ?",
+          "at": 1779788253385
+        },
+        {
+          "dir": "in",
+          "text": "Good evening",
+          "at": 1779788253385
+        },
+        {
+          "dir": "in",
+          "text": "How are you",
+          "at": 1779788253386
+        },
+        {
+          "dir": "in",
+          "text": "SHOW_CATALOG",
+          "at": 1779788253386
+        },
+        {
+          "dir": "in",
+          "text": "MENU_CAT 0",
+          "at": 1779788253387
+        },
+        {
+          "dir": "in",
+          "text": "SHOW_CATALOG",
+          "at": 1779788253388
         },
         {
           "dir": "out",
-          "text": "Hey there! How can I assist you today? Looking for something specific?",
-          "at": 1779565605783
+          "text": "Hello 👋 Welcome to EllTek Official Store.\n\nType *Menu* to browse our catalog, or tell me what you’re looking for.",
+          "at": 1779788256094
+        },
+        {
+          "dir": "out",
+          "text": "It seems like you're looking to see some products. Could you please specify what type of products you're interested in? For example, are you looking for phones, laptops, or something else?",
+          "at": 1779788257429
+        },
+        {
+          "dir": "out",
+          "text": "It seems like you're looking to see our product catalog. Could you please specify what type of products you're interested in?",
+          "at": 1779788257944
+        },
+        {
+          "dir": "out",
+          "text": "Hello! How can I assist you today? If you're looking for something specific, just let me know!",
+          "at": 1779788258545
         }
-      ],
-      "lastProductTopic": "laptop",
-      "lastResultsMinPrice": 52.8,
-      "lastResultsCategory": "Phones"
+      ]
+    },
+    "120363402147582997@newsletter": {
+      "lastAt": 1779639694540,
+      "state": "chat",
+      "greetedAt": 0,
+      "lastNudgeAt": 0,
+      "lastNudgeSig": "",
+      "aiFallbackAt": 1779639698654,
+      "history": [
+        {
+          "dir": "in",
+          "text": "🔰🔰🔰🔰🔰🔰🔰🔰🔰\n*UMaT SRC*\n*Register for Miss UMaT 2026!*👑\r\n\r\nThe stage is set, and the spotlight is calling! The SRC is officially opening registration for Miss UMaT 2026.\r\nThis is more than a pageant. It’s your chance to represent excellence, intelligence, and the vibrant spirit of UMaT while unlocking incredible opportunities.\n \nRegister for FREE here:  \nhttps://forms.gle/bKqiiuVx9AoTiBF56\n\nInterested in sponsoring or partnering? Reach out to us at:  \r\n📞 0594238811 / 0257276700\n\n*#RaisingTheStandard*\n*#TheUbuntuEffect*",
+          "at": 1779053358248
+        },
+        {
+          "dir": "in",
+          "text": "🔰🔰🔰🔰🔰🔰🔰🔰🔰\n*UMaT SRC*\n*Register for Miss UMaT 2026!*👑\r\n\r\nThe stage is set, and the spotlight is calling! The SRC is officially opening registration for Miss UMaT 2026.\r\nThis is more than a pageant. It’s your chance to represent excellence, intelligence, and the vibrant spirit of UMaT while unlocking incredible opportunities.\n \nRegister for FREE here:  \nhttps://forms.gle/bKqiiuVx9AoTiBF56\n\nInterested in sponsoring or partnering? Reach out to us at:  \r\n📞 0594238811 / 0257276700\n\n*#RaisingTheStandard*\n*#TheUbuntuEffect*",
+          "at": 1779060256669
+        },
+        {
+          "dir": "out",
+          "text": "It looks like you're sharing information about the Miss UMaT 2026 pageant! If you need any specific products or services related to this event, feel free to ask!",
+          "at": 1779060260150
+        },
+        {
+          "dir": "in",
+          "text": "https://docs.google.com/forms/d/1QVxp6p2aMEXwoLXGAHoX50Mh6qPKlQq-Dj51wKGHTK4/edit\n\nSent from Firefox 🦊 https://mzl.la/43doGMX",
+          "at": 1779273427703
+        },
+        {
+          "dir": "out",
+          "text": "It seems you've shared a link to a Google Form. If you need assistance with anything specific related to the form or the event, just let me know!",
+          "at": 1779273433465
+        },
+        {
+          "dir": "in",
+          "text": "https://www.linkedin.com/safety/go/?url=http%3A%2F%2Fwww%2Etamarackgeo%2Ecom&urlhash=uue5&mt=JIr7Dacaos-gSHgXMa2lAircSA77OGJi2uJ5ZbS9VVlKmCx177wjJtCNk1k4EYZ6Runmxvl0r2IKe2XTLd9BkjVHV7zPwgVjgSPkhUuYojNKv1eaQXyLYsTrkQ&isSdui=true",
+          "at": 1779340764749
+        },
+        {
+          "dir": "out",
+          "text": "It looks like you've shared a LinkedIn link. If you need help with something specific regarding this link or any related topic, feel free to ask!",
+          "at": 1779340772595
+        },
+        {
+          "dir": "in",
+          "text": "*GRADUATE INTERNSHIP*\n\nRole: Graduate Intern (Entry-Level)\n\nOrganization: PREBBiE Group\n\nLocation: Dansoman, Accra-Ghana\n\n*Overview*\nApplications are open for the PREBBiE Group Graduate Internship Programme (GIP) 2026.\n\nAs part of the programme, interns will be deployed into functional roles aligned with their areas of interest and organisational needs, where they will contribute to ongoing projects, strategic initiatives, and core business activities. \n\n*Key Tracks*\n- Technology & Innovation\n- ⁠Projects & Programs\n- ⁠Communications\n- ⁠Finance & Accounting\n- ⁠Human Capital\n\n*Minimum Requirements*\n- Completed Bachelor’s degree from an accredited institution. Fields of study should be relevant to the functional areas of PREBBiE Group. \n- ⁠Less than 3 years of post-graduation experience, ensuring eligibility is limited to early-career professionals.  \n\n*APPLY USING THE LINK*\nhttps://prebbiegroup.com/graduate-internship-programme/\n\n*Application Deadline: June 3, 2026*",
+          "at": 1779561580565
+        },
+        {
+          "dir": "in",
+          "text": "*NSS OPPORTUNITY*\n\nOrganization: Top Talent Resources Ltd\n\nLocation: Accra, Ghana.\n\n*Overview*\nTop Talent Resources and its partners are recruiting for the 2026/2027 National Service period.\n\n*Qualification:*\n- Information Technology\n- Marketing / Accounting\n- Business Development\n\n*HOW TO APPLY*\nInterested candidates should send their CV application via email to: \nhrm@toptalentgh.com\n\n*Deadline: June 30, 2026*",
+          "at": 1779605738781
+        },
+        {
+          "dir": "in",
+          "text": "━━━━━━━━━━━━━━━━━━\n*BOHAM–JESSE LEAD ADMINISTRATION*\n━━━━━━━━━━━━━━━━\n*Invitation: Zoom Career Talk on CV Writing & Job Applications*\n\nJoin us this *Saturday at 6:30 PM* GMT for an impactful Zoom session on CV Writing & Job Applications.\n\n*Panelists:*\n• Lord Mochiah — HR Professional with over 15 years of managerial HR experience\n• Joseph C. Garbrah — HR & Management Professional with over 20 years of experience\n• Yaw S. Nhiyraba — Enterprise Risk Governance & Legal Compliance Professional\n• Joe Honny — Cloud Engineer\n• ⁠\n*Date: Saturday, 30th May ,2026*\n*Time : 6:30pm*\n*Join Zoom Meeting:*\nhttps://us02web.zoom.us/j/84701537989\n*Meeting ID: 847 0153 7989*\n*Passcode: 0000*\n\n━━━━━━━━━━━━━━━━\n*BOHAM–JESSE LEAD ADMINISTRATION*\n━━━━━━━━━━━━━━━━",
+          "at": 1779639694540
+        }
+      ]
+    },
+    "38582144229480@lid": {
+      "lastAt": 1779617101840,
+      "state": "chat",
+      "greetedAt": 0,
+      "lastNudgeAt": 0,
+      "lastNudgeSig": "",
+      "history": [
+        {
+          "dir": "in",
+          "text": "🚀 Do you want to grow your WhatsApp status views and reach a larger audience for your business? 📈🔥 👉 Join this exclusive WhatsApp group and gain valuable contacts quickly! 🤝 More contacts = More views 👀, More engagement 💬, and More potential customers 💰! ✅ Don’t miss out—tap the link below to join now! https://chat.whatsapp.com/D6CNupIFPU9LS2NVNzwzau?mode=hqrc",
+          "at": 1779561336883
+        },
+        {
+          "dir": "in",
+          "text": "SHOW_CATALOG",
+          "at": 1779617074564
+        },
+        {
+          "dir": "in",
+          "text": "MENU_CAT 0",
+          "at": 1779617082300
+        },
+        {
+          "dir": "in",
+          "text": "MENU_CAT_PRODUCTS",
+          "at": 1779617101840
+        }
+      ]
     },
     "122982127145064@lid": {
       "lastAt": 1779561584419,
@@ -441,56 +604,6 @@
           "dir": "in",
           "text": "Alright",
           "at": 1779561584419
-        }
-      ]
-    },
-    "120363402147582997@newsletter": {
-      "lastAt": 1779561580565,
-      "state": "chat",
-      "greetedAt": 0,
-      "lastNudgeAt": 0,
-      "lastNudgeSig": "",
-      "aiFallbackAt": 1779053377966,
-      "history": [
-        {
-          "dir": "in",
-          "text": "🔰🔰🔰🔰🔰🔰🔰🔰🔰\n*UMaT SRC*\n*Register for Miss UMaT 2026!*👑\r\n\r\nThe stage is set, and the spotlight is calling! The SRC is officially opening registration for Miss UMaT 2026.\r\nThis is more than a pageant. It’s your chance to represent excellence, intelligence, and the vibrant spirit of UMaT while unlocking incredible opportunities.\n \nRegister for FREE here:  \nhttps://forms.gle/bKqiiuVx9AoTiBF56\n\nInterested in sponsoring or partnering? Reach out to us at:  \r\n📞 0594238811 / 0257276700\n\n*#RaisingTheStandard*\n*#TheUbuntuEffect*",
-          "at": 1779053358248
-        },
-        {
-          "dir": "in",
-          "text": "🔰🔰🔰🔰🔰🔰🔰🔰🔰\n*UMaT SRC*\n*Register for Miss UMaT 2026!*👑\r\n\r\nThe stage is set, and the spotlight is calling! The SRC is officially opening registration for Miss UMaT 2026.\r\nThis is more than a pageant. It’s your chance to represent excellence, intelligence, and the vibrant spirit of UMaT while unlocking incredible opportunities.\n \nRegister for FREE here:  \nhttps://forms.gle/bKqiiuVx9AoTiBF56\n\nInterested in sponsoring or partnering? Reach out to us at:  \r\n📞 0594238811 / 0257276700\n\n*#RaisingTheStandard*\n*#TheUbuntuEffect*",
-          "at": 1779060256669
-        },
-        {
-          "dir": "out",
-          "text": "It looks like you're sharing information about the Miss UMaT 2026 pageant! If you need any specific products or services related to this event, feel free to ask!",
-          "at": 1779060260150
-        },
-        {
-          "dir": "in",
-          "text": "https://docs.google.com/forms/d/1QVxp6p2aMEXwoLXGAHoX50Mh6qPKlQq-Dj51wKGHTK4/edit\n\nSent from Firefox 🦊 https://mzl.la/43doGMX",
-          "at": 1779273427703
-        },
-        {
-          "dir": "out",
-          "text": "It seems you've shared a link to a Google Form. If you need assistance with anything specific related to the form or the event, just let me know!",
-          "at": 1779273433465
-        },
-        {
-          "dir": "in",
-          "text": "https://www.linkedin.com/safety/go/?url=http%3A%2F%2Fwww%2Etamarackgeo%2Ecom&urlhash=uue5&mt=JIr7Dacaos-gSHgXMa2lAircSA77OGJi2uJ5ZbS9VVlKmCx177wjJtCNk1k4EYZ6Runmxvl0r2IKe2XTLd9BkjVHV7zPwgVjgSPkhUuYojNKv1eaQXyLYsTrkQ&isSdui=true",
-          "at": 1779340764749
-        },
-        {
-          "dir": "out",
-          "text": "It looks like you've shared a LinkedIn link. If you need help with something specific regarding this link or any related topic, feel free to ask!",
-          "at": 1779340772595
-        },
-        {
-          "dir": "in",
-          "text": "*GRADUATE INTERNSHIP*\n\nRole: Graduate Intern (Entry-Level)\n\nOrganization: PREBBiE Group\n\nLocation: Dansoman, Accra-Ghana\n\n*Overview*\nApplications are open for the PREBBiE Group Graduate Internship Programme (GIP) 2026.\n\nAs part of the programme, interns will be deployed into functional roles aligned with their areas of interest and organisational needs, where they will contribute to ongoing projects, strategic initiatives, and core business activities. \n\n*Key Tracks*\n- Technology & Innovation\n- ⁠Projects & Programs\n- ⁠Communications\n- ⁠Finance & Accounting\n- ⁠Human Capital\n\n*Minimum Requirements*\n- Completed Bachelor’s degree from an accredited institution. Fields of study should be relevant to the functional areas of PREBBiE Group. \n- ⁠Less than 3 years of post-graduation experience, ensuring eligibility is limited to early-career professionals.  \n\n*APPLY USING THE LINK*\nhttps://prebbiegroup.com/graduate-internship-programme/\n\n*Application Deadline: June 3, 2026*",
-          "at": 1779561580565
         }
       ]
     },
@@ -683,20 +796,6 @@
           "dir": "in",
           "text": "AI_FALLBACK_SUPPORT",
           "at": 1779561399449
-        }
-      ]
-    },
-    "38582144229480@lid": {
-      "lastAt": 1779561336883,
-      "state": "chat",
-      "greetedAt": 0,
-      "lastNudgeAt": 0,
-      "lastNudgeSig": "",
-      "history": [
-        {
-          "dir": "in",
-          "text": "🚀 Do you want to grow your WhatsApp status views and reach a larger audience for your business? 📈🔥 👉 Join this exclusive WhatsApp group and gain valuable contacts quickly! 🤝 More contacts = More views 👀, More engagement 💬, and More potential customers 💰! ✅ Don’t miss out—tap the link below to join now! https://chat.whatsapp.com/D6CNupIFPU9LS2NVNzwzau?mode=hqrc",
-          "at": 1779561336883
         }
       ]
     },
@@ -928,136 +1027,6 @@
           "at": 1779207715881
         }
       ]
-    },
-    "203186598056179@lid": {
-      "lastAt": 1779190316830,
-      "state": "chat",
-      "greetedAt": 1779188619915,
-      "lastNudgeAt": 1779189886116,
-      "lastNudgeSig": "greet_nudge",
-      "history": [
-        {
-          "dir": "in",
-          "text": "Hi",
-          "at": 1779188619634
-        },
-        {
-          "dir": "out",
-          "text": "Hello 👋 Welcome to EllTek Official.\n\nPlease how may I assist you?",
-          "at": 1779188620230
-        },
-        {
-          "dir": "in",
-          "text": "I want a phone",
-          "at": 1779188635419
-        },
-        {
-          "dir": "out",
-          "text": "Here are some phones you might like!",
-          "at": 1779188640478
-        },
-        {
-          "dir": "in",
-          "text": "I want a Samsung",
-          "at": 1779188692799
-        },
-        {
-          "dir": "out",
-          "text": "Here are some Samsung phones available for you!",
-          "at": 1779188695777
-        },
-        {
-          "dir": "in",
-          "text": "VIEW_PRODUCT 1136",
-          "at": 1779188746155
-        },
-        {
-          "dir": "in",
-          "text": "Hello",
-          "at": 1779189885496
-        },
-        {
-          "dir": "out",
-          "text": "Hi 👋 What are you looking for?\nExample: *gaming phone under 2500* or *iphone 13*.\n\nType *Menu* to browse.",
-          "at": 1779189886463
-        },
-        {
-          "dir": "in",
-          "text": "I want a Samsung galaxy",
-          "at": 1779189917389
-        },
-        {
-          "dir": "out",
-          "text": "Here are some Samsung Galaxy phones available for you!",
-          "at": 1779189933381
-        },
-        {
-          "dir": "in",
-          "text": "VIEW_PRODUCT 1136",
-          "at": 1779189960057
-        },
-        {
-          "dir": "in",
-          "text": "VIEW_PRODUCT 1136",
-          "at": 1779190316830
-        }
-      ],
-      "lastProductTopic": "Samsung Galaxy"
-    },
-    "49392358842400@lid": {
-      "lastAt": 1779185628730,
-      "state": "chat",
-      "greetedAt": 1779185456781,
-      "lastNudgeAt": 0,
-      "lastNudgeSig": "",
-      "history": [
-        {
-          "dir": "in",
-          "text": "Hello",
-          "at": 1779185456207
-        },
-        {
-          "dir": "out",
-          "text": "Hello 👋 Welcome to EllTek Official.\n\nPlease how may I assist you?",
-          "at": 1779185457250
-        },
-        {
-          "dir": "in",
-          "text": "What do you have",
-          "at": 1779185474771
-        },
-        {
-          "dir": "out",
-          "text": "I couldn't find any exact matches for *EllTek products*. Try typing *Menu* to browse!",
-          "at": 1779185481185
-        },
-        {
-          "dir": "in",
-          "text": "I want a phone",
-          "at": 1779185501336
-        },
-        {
-          "dir": "out",
-          "text": "Here are some phones you might like!",
-          "at": 1779185504457
-        },
-        {
-          "dir": "in",
-          "text": "I want samsung galaxy",
-          "at": 1779185587300
-        },
-        {
-          "dir": "out",
-          "text": "Here are some Samsung Galaxy options for you!",
-          "at": 1779185591677
-        },
-        {
-          "dir": "in",
-          "text": "VIEW_PRODUCT 1136",
-          "at": 1779185628730
-        }
-      ],
-      "lastProductTopic": "Samsung Galaxy"
     }
   }
 }
