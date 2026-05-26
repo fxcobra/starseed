@@ -2016,6 +2016,48 @@ export function createEllbot(deps: EllbotDeps) {
         "se",
         "air",
         "note",
+        "laptop",
+        "pc",
+        "computer",
+        "starlink",
+        "kit",
+        "suit",
+        "men",
+        "women",
+        "boy",
+        "girl",
+        "female",
+        "male",
+        "child",
+        "kid",
+        "internet",
+        "router",
+        "watch",
+        "shoe",
+        "shoes",
+        "shirt",
+        "dress",
+        "bag",
+        "tv",
+        "television",
+        "headphone",
+        "headphones",
+        "earphone",
+        "earbuds",
+        "camera",
+        "perfume",
+        "cologne",
+        "sneaker",
+        "sneakers",
+        "hp",
+        "dell",
+        "lenovo",
+        "asus",
+        "acer",
+        "apple",
+        "nike",
+        "adidas",
+        "puma",
       ]);
       for (const tok of raw) {
         if (/^\d{1,4}$/.test(tok)) {
@@ -2047,12 +2089,7 @@ export function createEllbot(deps: EllbotDeps) {
           typeof p?.description === "string" ? p.description : "",
           ...(Array.isArray(p?.variations) ? p.variations.map((v) => (typeof v?.name === "string" ? v.name : "")) : []),
         ];
-        const hay = parts
-          .join(" ")
-          .toLowerCase()
-          .replace(/[^a-z0-9\s]/g, " ")
-          .replace(/\s+/g, " ")
-          .trim();
+        const hay = parts.join(" ").toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
         if (!hay) continue;
         const tokens = new Set(hay.split(" ").filter((x) => x));
         let ok = true;
@@ -2100,17 +2137,16 @@ export function createEllbot(deps: EllbotDeps) {
 
     const systemPrompt =
       `You are a WhatsApp product matching engine for ${args.storeName}.\n` +
-      `Your job is to FILTER the candidate results to only what truly fits the customer's request.\n` +
-      `Be STRICT. If you are not confident a candidate matches, EXCLUDE it.\n\n` +
+      `Your job is to FILTER the candidate results to ONLY what truly fits the customer's request.\n` +
+      `Be EXTREMELY STRICT. If a candidate does not perfectly match the request, EXCLUDE IT.\n\n` +
       `Return ONLY one line of JSON:\n` +
       `{ "keep_ids": number[] }\n\n` +
       `Rules:\n` +
       `- Only include IDs from the candidates list.\n` +
-      `- Keep the best matches first.\n` +
-      `- Max 6 results.\n` +
-      `- If the customer specifies model/storage/specs (e.g. "iPhone 14 Pro 256GB"), ONLY keep exact matches.\n` +
-      `- If the customer specifies a brand, exclude other brands.\n` +
-      `- If nothing fits, return an empty array.\n` +
+      `- Keep the best matches first (Max 6 results).\n` +
+      `- CRITICAL: If the candidate is a DIFFERENT product type, brand, or category than requested, you MUST EXCLUDE IT.\n` +
+      `- If the customer specifies a model/storage (e.g. "iPhone 14 Pro 256GB"), ONLY keep exact matches.\n` +
+      `- It is ALWAYS BETTER to return an empty array [] than to return unrelated products. If nothing fits perfectly, return [].\n` +
       `- Do NOT include any other keys or text.\n`;
 
     const userPrompt =
@@ -2139,8 +2175,9 @@ export function createEllbot(deps: EllbotDeps) {
       if (!out.includes(p)) out.push(p);
       if (out.length >= 6) break;
     }
+
     const filteredOut = hardFilter(out);
-    return filteredOut.length ? filteredOut : out;
+    return strongTokens.length > 0 ? filteredOut : out;
   }
 
   async function runAgenticTurn(args: {
