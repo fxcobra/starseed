@@ -1916,6 +1916,44 @@ export function createEllbot(deps: EllbotDeps) {
     return false;
   }
 
+  function looksLikePriceQuestion(text: string) {
+    const t = (text ?? "").toLowerCase();
+    if (!t.trim()) return false;
+    return /\b(price|prices|cost|how much|howmuch|rate|pricing)\b/.test(t);
+  }
+
+  function extractPriceQuery(text: string) {
+    const t = (text ?? "").toString().trim();
+    if (!t) return "";
+    return t
+      .replace(/^(what'?s|what is|how much is|how much are|price of|prices of|cost of)\s+/i, "")
+      .replace(/\b(price|prices|cost|how much|howmuch|rate|pricing)\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function buildPriceAnswer(products: Product[], maxProducts: number) {
+    const list = (Array.isArray(products) ? products : []).slice(0, Math.max(1, Math.min(5, maxProducts)));
+    if (!list.length) return "";
+    const lines: string[] = [];
+    for (const p of list) {
+      const name = (p.name ?? "").toString().trim().slice(0, 60) || "Item";
+      const vs = Array.isArray(p.variations) ? p.variations : [];
+      const pricedVars = vs.filter((v): v is ProductVariation & { price: number } => typeof v?.price === "number" && Number.isFinite(v.price) && v.price > 0);
+      if (!pricedVars.length) {
+        lines.push(`• *${name}*: ${formatMoney(p.currency, Number.isFinite(p.price) ? p.price : 0)}`);
+        continue;
+      }
+      const min = Math.min(...pricedVars.map((v) => v.price));
+      lines.push(`• *${name}*: From ${formatMoney(p.currency, min)}`);
+      for (const v of pricedVars.slice(0, 6)) {
+        const vn = (v.name ?? "").toString().trim().slice(0, 40) || "Option";
+        lines.push(`   - ${vn}: ${formatMoney(p.currency, v.price)}`);
+      }
+    }
+    return lines.join("\n").slice(0, 950);
+  }
+
   async function aiPlanCatalogSearchNoTools(args: { session: Session; input: string; storeName: string; memoryTurns: number }) {
     const cfg = await getOpenRouterConfig();
     const aiTimeoutMs = openRouterTimeoutMsForModel(cfg.model) + 5_000;
@@ -2078,8 +2116,70 @@ export function createEllbot(deps: EllbotDeps) {
       if (out.length >= 6) break;
     }
 
-    const filteredOut = hardFilter(out);
-    return strongTokens.length > 0 ? filteredOut : out;
+    const cfg2 = await getOpenRouterConfig();
+    const aiTimeoutMs2 = openRouterTimeoutMsForModel(cfg2.model) + 5_000;
+    const chosenCandidates = out
+      .slice(0, 6)
+      .map((p) => {
+        const parts: string[] = [];
+        parts.push(`id=${p.id}`);
+        parts.push(`name=${(p.name ?? "").toString().trim().slice(0, 120)}`);
+        const cat = (p.category ?? "").toString().trim();
+        if (cat) parts.push(`category=${cat.slice(0, 60)}`);
+        const brand = (p.brand ?? "").toString().trim();
+        if (brand) parts.push(`brand=${brand.slice(0, 60)}`);
+        parts.push(`price=${formatMoney(p.currency, Number.isFinite(p.price) ? p.price : 0)}`);
+        const vs = Array.isArray(p.variations) ? p.variations : [];
+        const vnames = vs
+          .map((v) => (typeof v?.name === "string" ? v.name.trim() : ""))
+          .filter((x) => x)
+          .slice(0, 10);
+        if (vnames.length) parts.push(`variations=${vnames.join(", ")}`);
+        return `- ${parts.join(" | ")}`;
+      })
+      .join("\n");
+
+    const validateSystemPrompt =
+      `You are a universal marketplace product validator for ${args.storeName}.\n` +
+      `Your job is to REMOVE unrelated products from a short candidate list.\n\n` +
+      `Return ONLY one line of JSON:\n` +
+      `{ "keep_ids": number[] }\n\n` +
+      `Rules:\n` +
+      `- Only include IDs from the provided candidates list.\n` +
+      `- Keep ONLY the products that clearly match the customer's request.\n` +
+      `- It is ALWAYS BETTER to return [] than to include an unrelated product.\n` +
+      `- Max 6 results.\n` +
+      `- Do NOT include any other keys or text.\n`;
+
+    const validateUserPrompt =
+      `Customer request: ${input}\n` +
+      `Search query used: ${query}\n\n` +
+      `Candidates:\n${chosenCandidates}\n\n` +
+      `Return JSON now.`;
+
+    const validateResp = await withLocalTimeout(openRouterChatVendor(validateSystemPrompt, validateUserPrompt), aiTimeoutMs2, "AI timed out.");
+    let validated = out;
+    if (validateResp.ok) {
+      const parsed2 = extractFirstJsonObject(validateResp.content ?? "");
+      const keep2 = parsed2 && typeof parsed2 === "object" && Array.isArray((parsed2 as any).keep_ids) ? (parsed2 as any).keep_ids : null;
+      if (keep2) {
+        const allow2 = new Map<number, Product>();
+        for (const p of out) allow2.set(p.id, p);
+        const out2: Product[] = [];
+        for (const raw of keep2) {
+          const id = typeof raw === "number" ? raw : Number(raw);
+          if (!Number.isFinite(id)) continue;
+          const p = allow2.get(id);
+          if (!p) continue;
+          if (!out2.includes(p)) out2.push(p);
+          if (out2.length >= 6) break;
+        }
+        validated = out2;
+      }
+    }
+
+    const filteredOut = hardFilter(validated);
+    return strongTokens.length > 0 ? filteredOut : validated;
   }
 
   async function runAgenticTurn(args: {
@@ -2367,7 +2467,7 @@ export function createEllbot(deps: EllbotDeps) {
     const vs = Array.isArray(product.variations) ? product.variations : [];
     if (!vs.length) return `*${formatMoney(product.currency, product.price)}*`;
     const prices = vs
-      .map((v) => (typeof v.price === "number" && Number.isFinite(v.price) ? v.price : null))
+      .map((v) => (typeof v.price === "number" && Number.isFinite(v.price) && v.price > 0 ? v.price : null))
       .filter((x): x is number => typeof x === "number");
     if (!prices.length) return `*${formatMoney(product.currency, product.price)}*`;
     const min = Math.min(...prices);
@@ -3290,10 +3390,6 @@ export function createEllbot(deps: EllbotDeps) {
 
   async function sendProductDetails(to: string, product: Product) {
     const hasVars = Array.isArray(product.variations) && product.variations.length > 0;
-    if (hasVars) {
-      await sendVariationPicker(to, product, 0);
-      return;
-    }
 
     const used = (product.image_url ?? "").trim();
     const remainingImages = (Array.isArray(product.images) ? product.images : [])
@@ -3346,7 +3442,17 @@ export function createEllbot(deps: EllbotDeps) {
     }
 
     const media = await prepareImageMedia(product.image_url, product.name, "Product media prepare timed out.");
-    const safeDesc = ((product.description ?? "") as string).slice(0, 800);
+    const safeDesc = ((product.description ?? "") as string).slice(0, 620);
+    const vs = Array.isArray(product.variations) ? product.variations : [];
+    const pricedVars = vs
+      .filter((v): v is ProductVariation & { price: number } => typeof v?.price === "number" && Number.isFinite(v.price) && v.price > 0)
+      .sort((a, b) => (a.price !== b.price ? a.price - b.price : (a.name ?? "").localeCompare(b.name ?? "")))
+      .slice(0, 10);
+    const variationsText = hasVars && pricedVars.length
+      ? `\n\n*Options & Prices*\n${pricedVars
+          .map((v) => `• ${(v.name ?? "").toString().trim().slice(0, 40) || "Option"}: ${formatMoney(product.currency, v.price)}`)
+          .join("\n")}`
+      : "";
     const msg = deps.generateWAMessageFromContent(
       to,
       {
@@ -3356,12 +3462,18 @@ export function createEllbot(deps: EllbotDeps) {
             interactiveMessage: {
               header: { title: "", hasMediaAttachment: true, ...media },
               body: {
-                text: `*${product.name.trim().slice(0, 60)}*\n\n💰 *Price:* ${formatMoney(product.currency, product.price)}\n\n${safeDesc}`.slice(0, 1024),
+                text: `*${product.name.trim().slice(0, 60)}*\n\n💰 ${productPriceLabel(product)}\n\n${safeDesc}${variationsText}`.slice(0, 1024),
               },
               footer: { text: "EllTek" },
               nativeFlowMessage: {
                 buttons: [
-                  { name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Buy Now", id: `BUY ${product.id}` }) },
+                  {
+                    name: "quick_reply",
+                    buttonParamsJson: JSON.stringify({
+                      display_text: hasVars ? "Options" : "Buy Now",
+                      id: `BUY ${product.id}`,
+                    }),
+                  },
                   { name: "quick_reply", buttonParamsJson: JSON.stringify({ display_text: "Catalog", id: "SHOW_CATALOG" }) },
                 ],
               },
@@ -4473,6 +4585,23 @@ export function createEllbot(deps: EllbotDeps) {
       storeFactsParts.push(`Manual payment: ${t}${instr ? ` — ${instr.slice(0, 500)}` : ""}`);
     }
     const storeFacts = storeFactsParts.join("\n").trim();
+
+    if (looksLikePriceQuestion(text)) {
+      const q = extractPriceQuery(text) || (session.lastProductTopic ?? "").trim();
+      if (!q) {
+        await sendText(to, "Which item should I price for you?");
+        return;
+      }
+      const hits = await smartSearch(q, deps.vendorId, products, {});
+      if (!hits.length) {
+        await sendWithMenu(to, session, `I couldn't find an exact match for *${q}*. Tap Menu to browse.`, storeName);
+        return;
+      }
+      const answer = buildPriceAnswer(hits, 4);
+      await sendText(to, (`💰 *Prices*\n\n${answer}\n\nWant me to show the product cards? Tap Menu.`).slice(0, 1024));
+      return;
+    }
+
     await runAgenticTurn({
       to,
       session,
