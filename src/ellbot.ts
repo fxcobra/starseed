@@ -1949,6 +1949,92 @@ export function createEllbot(deps: EllbotDeps) {
     return { query, brand: brand || null, negative_keywords, min_price, max_price, intro_message };
   }
 
+  async function aiRefineCatalogHits(args: {
+    session: Session;
+    input: string;
+    query: string;
+    storeName: string;
+    hits: Product[];
+    memoryTurns: number;
+  }) {
+    const input = (args.input ?? "").trim();
+    const query = (args.query ?? "").trim();
+    const hits = Array.isArray(args.hits) ? args.hits : [];
+    if (!hits.length) return hits;
+    if (!input || !query) return hits;
+
+    const cfg = await getOpenRouterConfig();
+    const aiTimeoutMs = openRouterTimeoutMsForModel(cfg.model) + 5_000;
+
+    const history = agentMessagesFromSession(args.session, args.memoryTurns)
+      .map((m) => `${m.role === "user" ? "Customer" : "Agent"}: ${m.content}`)
+      .join("\n")
+      .trim();
+
+    const candidates = hits
+      .slice(0, 15)
+      .map((p) => {
+        const parts: string[] = [];
+        parts.push(`id=${p.id}`);
+        parts.push(`name=${(p.name ?? "").toString().trim().slice(0, 120)}`);
+        const cat = (p.category ?? "").toString().trim();
+        if (cat) parts.push(`category=${cat.slice(0, 60)}`);
+        const brand = (p.brand ?? "").toString().trim();
+        if (brand) parts.push(`brand=${brand.slice(0, 60)}`);
+        parts.push(`price=${formatMoney(p.currency, Number.isFinite(p.price) ? p.price : 0)}`);
+        const vs = Array.isArray(p.variations) ? p.variations : [];
+        const vnames = vs
+          .map((v) => (typeof v?.name === "string" ? v.name.trim() : ""))
+          .filter((x) => x)
+          .slice(0, 10);
+        if (vnames.length) parts.push(`variations=${vnames.join(", ")}`);
+        const desc = (p.description ?? "").toString().trim();
+        if (desc) parts.push(`desc=${desc.slice(0, 140)}`);
+        return `- ${parts.join(" | ")}`;
+      })
+      .join("\n");
+
+    const systemPrompt =
+      `You are a WhatsApp product matching engine for ${args.storeName}.\n` +
+      `Your job is to FILTER the candidate results to only what truly fits the customer's request.\n\n` +
+      `Return ONLY one line of JSON:\n` +
+      `{ "keep_ids": number[] }\n\n` +
+      `Rules:\n` +
+      `- Only include IDs from the candidates list.\n` +
+      `- Keep the best matches first.\n` +
+      `- Max 10 results.\n` +
+      `- If nothing fits, return an empty array.\n` +
+      `- Do NOT include any other keys or text.\n`;
+
+    const userPrompt =
+      `${history ? `Conversation:\n${history}\n\n` : ""}` +
+      `Customer request: ${input}\n` +
+      `Search query used: ${query}\n\n` +
+      `Candidates:\n${candidates}\n\n` +
+      `Return JSON now.`;
+
+    const resp = await withLocalTimeout(openRouterChatVendor(systemPrompt, userPrompt), aiTimeoutMs, "AI timed out.");
+    if (!resp.ok) return hits;
+
+    const parsed = extractFirstJsonObject(resp.content ?? "");
+    if (!parsed || typeof parsed !== "object") return hits;
+    const keep_ids = Array.isArray((parsed as any).keep_ids) ? (parsed as any).keep_ids : null;
+    if (!keep_ids) return hits;
+
+    const allowed = new Map<number, Product>();
+    for (const p of hits) allowed.set(p.id, p);
+    const out: Product[] = [];
+    for (const raw of keep_ids) {
+      const id = typeof raw === "number" ? raw : Number(raw);
+      if (!Number.isFinite(id)) continue;
+      const p = allowed.get(id);
+      if (!p) continue;
+      if (!out.includes(p)) out.push(p);
+      if (out.length >= 10) break;
+    }
+    return out;
+  }
+
   async function runAgenticTurn(args: {
     to: string;
     session: Session;
@@ -2037,6 +2123,16 @@ export function createEllbot(deps: EllbotDeps) {
               negativeKeywords: planned.negative_keywords,
             });
             if (hits.length) {
+              hits = await aiRefineCatalogHits({
+                session: args.session,
+                input: args.input,
+                query: planned.query,
+                storeName: args.storeName,
+                hits,
+                memoryTurns: args.memoryTurns,
+              });
+            }
+            if (hits.length) {
               args.session.lastProductTopic = planned.query;
               const intro = (planned.intro_message || `Here are some options for *${planned.query}*:`).slice(0, 300);
               await sendAndRemember(args.to, args.session, intro);
@@ -2069,6 +2165,16 @@ export function createEllbot(deps: EllbotDeps) {
               max: planned.max_price,
               negativeKeywords: planned.negative_keywords,
             });
+            if (hits.length) {
+              hits = await aiRefineCatalogHits({
+                session: args.session,
+                input: args.input,
+                query: queryToSearch,
+                storeName: args.storeName,
+                hits,
+                memoryTurns: args.memoryTurns,
+              });
+            }
             if (hits.length) {
               args.session.lastProductTopic = (planned.query || planned.brand || "products").slice(0, 80);
               const intro = (planned.intro_message || `Here are the options I found:`).slice(0, 300);
@@ -2130,6 +2236,16 @@ export function createEllbot(deps: EllbotDeps) {
           })
         : [];
 
+      if (hits.length) {
+        hits = await aiRefineCatalogHits({
+          session: args.session,
+          input: args.input,
+          query: queryToSearch,
+          storeName: args.storeName,
+          hits,
+          memoryTurns: args.memoryTurns,
+        });
+      }
       if (hits.length) {
         if (queryToSearch) args.session.lastProductTopic = queryToSearch;
         const finalIntro = (intro || `Here are some options for *${queryToSearch}*:`).slice(0, 300);
@@ -3603,7 +3719,7 @@ export function createEllbot(deps: EllbotDeps) {
         if (!lastNudge || nowMs() - lastNudge > 2 * 60_000 || session.lastNudgeSig !== sig) {
           session.lastNudgeAt = nowMs();
           session.lastNudgeSig = sig;
-          const nudge = `Hi 👋 What are you looking for?\nExample: *gaming phone under 2500* or *iphone 13*.\n\nTap Menu to browse.`;
+          const nudge = `Hi 👋 What are you looking for?\n\n\nYou can ask me directly or tap Menu to browse directly.`;
           await sendMenuAndRemember(to, session, nudge, storeName);
           scheduleSave();
           return;
