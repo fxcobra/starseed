@@ -610,6 +610,7 @@ export async function fetchProductsForVendor(vendorId: string): Promise<Product[
           .filter((x: unknown): x is string => typeof x === "string" && x.trim() !== "")
           .map((x: string) => absolutizeMediaUrl(x));
         if (!Number.isFinite(vid) || vid <= 0 || !vname) continue;
+        if (typeof vPrice !== "number" || !Number.isFinite(vPrice) || vPrice <= 0) continue;
         variations.push({ id: vid, name: vname, price: vPrice, images: vImgs });
       }
 
@@ -718,6 +719,7 @@ export async function fetchProductsForVendor(vendorId: string): Promise<Product[
         .filter((x: unknown): x is string => typeof x === "string" && x.trim() !== "")
         .map((x: string) => absolutizeMediaUrl(x));
       if (!Number.isFinite(vid) || vid <= 0 || !vname) continue;
+      if (typeof vPrice !== "number" || !Number.isFinite(vPrice) || vPrice <= 0) continue;
       variations.push({ id: vid, name: vname, price: vPrice, images: vImgs });
     }
     const varPrices = variations
