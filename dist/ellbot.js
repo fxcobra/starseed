@@ -3,6 +3,67 @@ import http from "node:http";
 import https from "node:https";
 import fs from "node:fs/promises";
 import path from "node:path";
+// #region debug-point A:init
+const __dbg = (() => {
+    let cfg = null;
+    let loadP = null;
+    const readEnv = async () => {
+        const directUrl = typeof process.env.DEBUG_SERVER_URL === "string" ? process.env.DEBUG_SERVER_URL.trim() : "";
+        const directSession = typeof process.env.DEBUG_SESSION_ID === "string" ? process.env.DEBUG_SESSION_ID.trim() : "";
+        if (directUrl && directSession)
+            return { url: directUrl, sessionId: directSession };
+        const candidates = [
+            path.resolve(process.cwd(), ".dbg", "bot-pause-chatlogs.env"),
+            path.resolve(process.cwd(), "..", ".dbg", "bot-pause-chatlogs.env"),
+            path.resolve(process.cwd(), "..", "..", ".dbg", "bot-pause-chatlogs.env"),
+        ];
+        for (const p of candidates) {
+            try {
+                const raw = await fs.readFile(p, "utf8");
+                const url = raw.match(/DEBUG_SERVER_URL=(.+)/)?.[1]?.trim() ?? "";
+                const sessionId = raw.match(/DEBUG_SESSION_ID=(.+)/)?.[1]?.trim() ?? "";
+                if (url && sessionId)
+                    return { url, sessionId };
+            }
+            catch {
+                void 0;
+            }
+        }
+        return null;
+    };
+    const ensure = async () => {
+        if (cfg)
+            return cfg;
+        if (!loadP)
+            loadP = readEnv();
+        cfg = await loadP;
+        return cfg;
+    };
+    return (e) => {
+        if (typeof globalThis.fetch !== "function")
+            return;
+        void ensure().then((c) => {
+            if (!c)
+                return;
+            globalThis
+                .fetch(c.url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    sessionId: c.sessionId,
+                    runId: e.runId,
+                    hypothesisId: e.hypothesisId,
+                    location: e.location,
+                    msg: e.msg,
+                    data: e.data ?? {},
+                    traceId: e.traceId,
+                    ts: Date.now(),
+                }),
+            })
+                .catch(() => void 0);
+        });
+    };
+})();
 const storeSlugCache = new Map();
 const vendorBotConfigCache = new Map();
 const productsSource = (process.env.BOT_PRODUCTS_SOURCE ?? "supabase").trim().toLowerCase();
@@ -119,6 +180,17 @@ export async function fetchVendorBotConfig(vendorId) {
     })
         .filter((m) => m.id && m.name)
         .slice(0, 20);
+    const excludedPeersRaw = Array.isArray(json?.whatsappExcludedPeers) ? json.whatsappExcludedPeers : [];
+    const excludedPeers = excludedPeersRaw
+        .filter((x) => typeof x === "string" && String(x).trim() !== "")
+        .map((x) => x.trim())
+        .slice(0, 2000);
+    const takeoverAll = Boolean(json?.whatsappTakeoverAll);
+    const takeoverPeersRaw = Array.isArray(json?.whatsappTakeoverPeers) ? json.whatsappTakeoverPeers : [];
+    const takeoverPeers = takeoverPeersRaw
+        .filter((x) => typeof x === "string" && String(x).trim() !== "")
+        .map((x) => x.trim())
+        .slice(0, 2000);
     const cfg = {
         vendor: {
             id: Number.isFinite(vendorIdNum) ? vendorIdNum : Number(vendorId),
@@ -152,6 +224,9 @@ export async function fetchVendorBotConfig(vendorId) {
             notes: deliveryNotes,
             methods: deliveryMethods,
         },
+        whatsappExcludedPeers: excludedPeers,
+        whatsappTakeoverAll: takeoverAll,
+        whatsappTakeoverPeers: takeoverPeers,
         whatsappGroupSettings: {
             enabled: Boolean(json?.whatsappGroupSettings?.enabled),
             tagOnly: typeof json?.whatsappGroupSettings?.tagOnly === "boolean" ? Boolean(json.whatsappGroupSettings.tagOnly) : true,
@@ -1839,10 +1914,10 @@ export function createEllbot(deps) {
             `{ "keep_ids": number[] }\n\n` +
             `Rules:\n` +
             `- Only include IDs from the candidates list.\n` +
-            `- Keep the best matches first (Max 6 results).\n` +
+            `- Keep the best matches first (Max 8 results).\n` +
             `- CRITICAL: If the candidate is a DIFFERENT product type, brand, or category than requested, EXCLUDE IT.\n` +
             `- EXACT MODELS/SIZES: If the customer asks for a specific version/size/code (e.g. "13", "XL", "500ml", "256gb"), EXCLUDE any candidate that represents a different version.\n` +
-            `- It is ALWAYS BETTER to return an empty array [] than to return unrelated products.\n` +
+            `- Prefer returning fewer results over adding weak/incorrect matches.\n` +
             `- Do NOT include any other keys or text.\n`;
         const userPrompt = `${history ? `Conversation:\n${history}\n\n` : ""}` +
             `Customer request: ${input}\n` +
@@ -1871,13 +1946,13 @@ export function createEllbot(deps) {
                 continue;
             if (!out.includes(p))
                 out.push(p);
-            if (out.length >= 6)
+            if (out.length >= 8)
                 break;
         }
         const cfg2 = await getOpenRouterConfig();
         const aiTimeoutMs2 = openRouterTimeoutMsForModel(cfg2.model) + 5_000;
         const chosenCandidates = out
-            .slice(0, 6)
+            .slice(0, 8)
             .map((p) => {
             const parts = [];
             parts.push(`id=${p.id}`);
@@ -1905,9 +1980,10 @@ export function createEllbot(deps) {
             `{ "keep_ids": number[] }\n\n` +
             `Rules:\n` +
             `- Only include IDs from the provided candidates list.\n` +
-            `- Keep ONLY the products that clearly match the customer's request.\n` +
-            `- It is ALWAYS BETTER to return [] than to include an unrelated product.\n` +
-            `- Max 6 results.\n` +
+            `- Keep products that clearly match the customer's request.\n` +
+            `- If the request is broad/vague, keep the closest relevant matches (1–5).\n` +
+            `- Return [] only if nothing is relevant.\n` +
+            `- Max 8 results.\n` +
             `- Do NOT include any other keys or text.\n`;
         const validateUserPrompt = `Customer request: ${input}\n` +
             `Search query used: ${query}\n\n` +
@@ -1932,13 +2008,15 @@ export function createEllbot(deps) {
                         continue;
                     if (!out2.includes(p))
                         out2.push(p);
-                    if (out2.length >= 6)
+                    if (out2.length >= 8)
                         break;
                 }
                 validated = out2;
             }
         }
         const filteredOut = hardFilter(validated);
+        if (!strongTokens.length && validated.length === 0 && out.length)
+            return out;
         return strongTokens.length > 0 ? filteredOut : validated;
     }
     async function runAgenticTurn(args) {
@@ -3177,6 +3255,15 @@ export function createEllbot(deps) {
         let text = (rawText ?? "").trim();
         if (!text)
             return;
+        // #region debug-point B:dm-entry
+        __dbg({
+            runId: "post",
+            hypothesisId: "B",
+            location: "ellbot.ts:handleDm:entry",
+            msg: "[DEBUG] dm entry",
+            data: { vendorId: deps.vendorId, to, upper: text.toUpperCase().trim().slice(0, 32), pid: process.pid },
+        });
+        // #endregion
         await ensureSessionsLoaded();
         if (!userSessions[to])
             userSessions[to] = { state: "chat", cart: null, greetedAt: 0, lastNudgeAt: 0, lastNudgeSig: "" };
@@ -3287,8 +3374,51 @@ export function createEllbot(deps) {
             }
         }
         const vendorCfg = await fetchVendorBotConfig(deps.vendorId);
+        // #region debug-point C:cfg-snapshot
+        __dbg({
+            runId: "post",
+            hypothesisId: "C",
+            location: "ellbot.ts:handleDm:vendorCfg",
+            msg: "[DEBUG] vendor config snapshot",
+            data: {
+                vendorId: deps.vendorId,
+                to,
+                sessionBotPaused: Boolean(session.botPaused),
+                handoffPauseBot: Boolean(vendorCfg?.whatsappHandoffSettings?.pauseBot),
+                takeoverAll: Boolean(vendorCfg?.whatsappTakeoverAll),
+                takeoverPeersCount: Array.isArray(vendorCfg?.whatsappTakeoverPeers) ? vendorCfg.whatsappTakeoverPeers.length : null,
+            },
+        });
+        // #endregion
         if (isExcludedPeer(to, vendorCfg?.whatsappExcludedPeers))
             return;
+        const takeoverAll = Boolean(vendorCfg?.whatsappTakeoverAll);
+        const takeoverPeers = Array.isArray(vendorCfg?.whatsappTakeoverPeers) ? vendorCfg.whatsappTakeoverPeers : [];
+        const peerKey = (jid) => {
+            const s = String(jid ?? "").trim();
+            if (!s)
+                return "";
+            const left = s.includes("@") ? (s.split("@")[0] ?? s) : s;
+            const digits = left.replace(/[^\d]/g, "");
+            return digits || left;
+        };
+        const takeoverSet = new Set(takeoverPeers
+            .filter((x) => typeof x === "string" && String(x).trim() !== "")
+            .map((x) => peerKey(x))
+            .filter((x) => x));
+        const pausedByTakeover = takeoverAll || takeoverSet.has(peerKey(to));
+        if (pausedByTakeover) {
+            // #region debug-point E:takeover-paused
+            __dbg({
+                runId: "post",
+                hypothesisId: "E",
+                location: "ellbot.ts:handleDm:takeover",
+                msg: "[DEBUG] blocked by takeover pause",
+                data: { vendorId: deps.vendorId, to, takeoverAll, takeoverPeersCount: takeoverSet.size },
+            });
+            // #endregion
+            return;
+        }
         const brain = vendorCfg?.whatsappBotBrain;
         const catalogCfg = vendorCfg?.whatsappCatalogSettings;
         const storeName = (brain?.storeName ?? vendorCfg?.vendor?.name ?? "Our Store").trim() || "Our Store";
@@ -3305,6 +3435,15 @@ export function createEllbot(deps) {
         const allowPriceSort = typeof catalogCfg?.allowPriceSort === "boolean" ? catalogCfg.allowPriceSort : true;
         const allowLatest = typeof catalogCfg?.allowLatest === "boolean" ? catalogCfg.allowLatest : true;
         if (session.botPaused) {
+            // #region debug-point D:paused-branch
+            __dbg({
+                runId: "post",
+                hypothesisId: "D",
+                location: "ellbot.ts:handleDm:paused",
+                msg: "[DEBUG] session.botPaused branch",
+                data: { vendorId: deps.vendorId, to, upperText },
+            });
+            // #endregion
             if (upperText === "RESUME_BOT") {
                 session.botPaused = false;
                 scheduleSave();
@@ -3325,6 +3464,58 @@ export function createEllbot(deps) {
             ? brain.assistantStyle
             : "balanced";
         const memoryTurns = typeof brain?.memoryTurns === "number" ? brain.memoryTurns : Number(brain?.memoryTurns ?? 6);
+        const looksLikeShortReply = (() => {
+            if (session.pendingConfirm)
+                return false;
+            const raw = (text ?? "").toString().trim();
+            if (!raw)
+                return true;
+            const norm = raw
+                .toLowerCase()
+                .replace(/[^a-z0-9\s]/g, " ")
+                .replace(/\s+/g, " ")
+                .trim();
+            if (!norm)
+                return true;
+            if (/\d/.test(norm))
+                return false;
+            const words = norm.split(" ").filter((w) => w);
+            if (words.length > 3)
+                return false;
+            const phrase = words.join(" ");
+            const okPhrases = new Set([
+                "ok",
+                "okay",
+                "k",
+                "kk",
+                "alright",
+                "thanks",
+                "thank you",
+                "thx",
+                "nice",
+                "cool",
+                "great",
+                "good",
+                "hello",
+                "hi",
+                "hey",
+                "good morning",
+                "good afternoon",
+                "good evening",
+            ]);
+            if (okPhrases.has(phrase))
+                return true;
+            if (words.length === 1 && okPhrases.has(words[0]))
+                return true;
+            return false;
+        })();
+        if (looksLikeShortReply && upperText !== "MENU" && upperText !== "SHOW_CATALOG" && upperText !== "RESUME_BOT") {
+            const reply = (typeof brain?.fallback === "string" && brain.fallback.trim()
+                ? brain.fallback.trim()
+                : "Type *Menu* to browse our catalog, or tell me what you’re looking for.") || "Type *Menu* to browse.";
+            await sendMenuAndRemember(to, session, reply, storeName);
+            return;
+        }
         const now = nowMs();
         const lastProfileAt = typeof session.profileFetchedAt === "number" && Number.isFinite(session.profileFetchedAt) ? session.profileFetchedAt : 0;
         if (!lastProfileAt || now - lastProfileAt > 12 * 60 * 60_000) {

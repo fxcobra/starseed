@@ -1,171 +1,171 @@
 {
   "v": 1,
-  "savedAt": 1779805233459,
+  "savedAt": 1779939778463,
   "sessions": {
     "271347544494286@lid": {
-      "lastAt": 1779805232253,
+      "lastAt": 1779939777994,
       "state": "chat",
       "email": "buzinezz1379@gmail.com",
       "momoNumber": "0551234987",
       "lastReference": "PSK_20260519191938_a5d71183",
-      "greetedAt": 1779788222363,
-      "lastNudgeAt": 1779788534605,
+      "greetedAt": 1779937922697,
+      "lastNudgeAt": 1779937962420,
       "lastNudgeSig": "greet_nudge",
       "aiFallbackAt": 1779650951905,
       "deliveryAddress": "Kumasi Santasi",
       "history": [
         {
           "dir": "in",
-          "text": "Pls use my Channel to see available items and prices \n\n\nhttps://whatsapp.com/channel/0029VaY8FYUHrDZdD7cDno3i",
-          "at": 1779788281439
-        },
-        {
-          "dir": "out",
-          "text": "I'm unable to access external links or channels. However, I can help you check our inventory here! Just let me know what you're looking for.",
-          "at": 1779788284578
+          "text": "Hi 👋🏽",
+          "at": 1779939252177
         },
         {
           "dir": "in",
-          "text": "Hi",
-          "at": 1779788533821
+          "text": "Nice 👍🏽",
+          "at": 1779939264220
         },
         {
           "dir": "out",
-          "text": "Hi 👋 What are you looking for?\nExample: *gaming phone under 2500* or *iphone 13*.\n\nTap Menu to browse.",
-          "at": 1779788534622
-        },
-        {
-          "dir": "in",
-          "text": "I want a starlink Mini kit",
-          "at": 1779788674233
-        },
-        {
-          "dir": "out",
-          "text": "I can check my system to see if we have a Starlink Mini kit in stock! Would you like me to pull up the options for you?",
-          "at": 1779788679653
-        },
-        {
-          "dir": "in",
-          "text": "Yes please",
-          "at": 1779788687475
-        },
-        {
-          "dir": "out",
-          "text": "I checked the system, here are the options we have!",
-          "at": 1779788697025
-        },
-        {
-          "dir": "in",
-          "text": "I want a starlink Mini Router",
-          "at": 1779788738888
-        },
-        {
-          "dir": "out",
-          "text": "I can check my system to see if we have a Starlink Mini Router in stock! Would you like me to pull up the options for you?",
-          "at": 1779788742841
-        },
-        {
-          "dir": "in",
-          "text": "Yeah",
-          "at": 1779788747116
-        },
-        {
-          "dir": "out",
-          "text": "I checked the system, here are the options we have!",
-          "at": 1779788752747
+          "text": "Glad to hear that! How can I help you today?",
+          "at": 1779939269341
         },
         {
           "dir": "in",
           "text": "Hi 👋🏽",
-          "at": 1779805040974
+          "at": 1779939481518
         },
         {
           "dir": "out",
-          "text": "Hi there! 👋🏽 What can I assist you with today?",
-          "at": 1779805048053
+          "text": "I can help you find items quickly.\n\nTry: *Menu*  |  *under 500*  |  *phones*  |  *latest*",
+          "at": 1779939482555
         },
         {
           "dir": "in",
-          "text": "How much is iPhone 13 128?",
-          "at": 1779805052285
-        },
-        {
-          "dir": "in",
-          "text": "I want iPhone 13",
-          "at": 1779805074153
+          "text": "I need a starlink Standard Mount",
+          "at": 1779939497702
         },
         {
           "dir": "out",
-          "text": "I can check my system to see if we have the iPhone 13 in stock! Would you like me to pull up the options for you?",
-          "at": 1779805076291
+          "text": "I can check my system to see if we have a Starlink Standard Mount in stock! Would you like me to pull up the options for you?",
+          "at": 1779939504722
         },
         {
           "dir": "in",
           "text": "Ok",
-          "at": 1779805080339
+          "at": 1779939508972
         },
         {
           "dir": "out",
-          "text": "I couldn't find any exact matches for *iPhone 13*. Tap Menu to browse.",
-          "at": 1779805085053
+          "text": "I couldn't find any exact matches for *Starlink Standard Mount*. Tap Menu to browse.",
+          "at": 1779939519921
         },
         {
           "dir": "in",
-          "text": "I want a starlink Mini kit",
-          "at": 1779805104858
+          "text": "Sure?",
+          "at": 1779939528005
         },
         {
           "dir": "out",
-          "text": "I can check my system to see if we have a Starlink Mini Kit in stock! Would you like me to pull up the options for you?",
-          "at": 1779805108551
+          "text": "I'm sorry, I just checked the system and we don't have exactly what you're looking for right now.",
+          "at": 1779939535900
         },
         {
           "dir": "in",
-          "text": "Ok",
-          "at": 1779805112750
+          "text": "I want a starlink Standard Mount",
+          "at": 1779939556051
         },
         {
           "dir": "out",
-          "text": "I checked the system, here are the options for the Starlink Mini Kit!",
-          "at": 1779805119505
-        },
-        {
-          "dir": "in",
-          "text": "I want a starlink Mini Router",
-          "at": 1779805153470
-        },
-        {
-          "dir": "out",
-          "text": "I can check my system to see if we have a Starlink Mini Router in stock! Would you like me to pull up the options for you?",
-          "at": 1779805156776
+          "text": "I can check my system to see if we have a Starlink Standard Mount in stock! Would you like me to pull up the options for you?",
+          "at": 1779939563650
         },
         {
           "dir": "in",
           "text": "Ok",
-          "at": 1779805160768
+          "at": 1779939565999
         },
         {
           "dir": "out",
-          "text": "I checked the system, here are the options for the Starlink Mini Router!",
-          "at": 1779805166108
+          "text": "I couldn't find any exact matches for *Starlink Standard Mount*. Tap Menu to browse.",
+          "at": 1779939573336
         },
         {
           "dir": "in",
-          "text": "How much is starlink Standard Kit?",
-          "at": 1779805203878
+          "text": "I want a starlink Standard Kit",
+          "at": 1779939586397
+        },
+        {
+          "dir": "out",
+          "text": "I can check my system to see if we have a Starlink Standard Kit in stock! Would you like me to pull up the options for you?",
+          "at": 1779939588429
+        },
+        {
+          "dir": "in",
+          "text": "Arlt",
+          "at": 1779939595384
+        },
+        {
+          "dir": "out",
+          "text": "I couldn't find any exact matches for *Starlink Standard Kit*. Tap Menu to browse.",
+          "at": 1779939600379
+        },
+        {
+          "dir": "in",
+          "text": "SHOW_CATALOG",
+          "at": 1779939607777
+        },
+        {
+          "dir": "in",
+          "text": "MENU_CAT 1",
+          "at": 1779939611695
+        },
+        {
+          "dir": "in",
+          "text": "MENU_CAT_PRODUCTS",
+          "at": 1779939614023
+        },
+        {
+          "dir": "in",
+          "text": "Let me me see what you have available",
+          "at": 1779939721749
+        },
+        {
+          "dir": "out",
+          "text": "I checked the system, here are the options we have!",
+          "at": 1779939728817
+        },
+        {
+          "dir": "in",
+          "text": "I want a starlink Standard Mount",
+          "at": 1779939743081
+        },
+        {
+          "dir": "out",
+          "text": "I can check my system to see if we have a Starlink Standard Mount in stock! Would you like me to pull up the options for you?",
+          "at": 1779939748582
         },
         {
           "dir": "in",
           "text": "Ok",
-          "at": 1779805214839
+          "at": 1779939752061
         },
         {
           "dir": "out",
-          "text": "Here are the options for the Starlink Mini Router.",
-          "at": 1779805232253
+          "text": "I checked the system, here are the options we have!",
+          "at": 1779939759859
+        },
+        {
+          "dir": "in",
+          "text": "Ok",
+          "at": 1779939777258
+        },
+        {
+          "dir": "out",
+          "text": "I can help you find items quickly.\n\nTry: *Menu*  |  *under 500*  |  *phones*  |  *latest*",
+          "at": 1779939777994
         }
       ],
-      "lastProductTopic": "Starlink Mini Router",
+      "lastProductTopic": "Starlink Standard Mount",
       "lastResultsMinPrice": 52.8,
       "lastResultsCategory": "Phones"
     },
@@ -958,75 +958,6 @@
         }
       ],
       "lastProductTopic": "bot"
-    },
-    "120363424484852138@newsletter": {
-      "lastAt": 1779250499323,
-      "state": "chat",
-      "greetedAt": 0,
-      "lastNudgeAt": 0,
-      "lastNudgeSig": "",
-      "history": [
-        {
-          "dir": "in",
-          "text": "🌱 `@itsliaaa/baileys`\n\n📦 Version: 0.3.9\n\n📝 Changelog:\n- chore(messages): remove unused businessMessageForwardInfo fields.\n- chore(messages): remove unused payload fields.\n- chore(messages): add more options for poll messages.\n- chore(sock): update WAProto.\n- fix(messages): wrong endDate value in poll.\n- fix(process-message): only drop self-only protocolMessages from non-self senders.\n- update(messages): add lottieStickerMessage wrapper.\n\n📁 Repository:\nhttps://github.com/itsliaaa/baileys#readme\n\n🧰 NPM:\nhttps://www.npmjs.com/package/@itsliaaa/baileys\n\n💰 Support Me:\nhttps://saweria.co/itsliaaa",
-          "at": 1779250494708
-        },
-        {
-          "dir": "out",
-          "text": "Hi there! It looks like you shared some information about a package. How can I assist you today? Are you looking for something specific related to this package or perhaps something else?",
-          "at": 1779250499323
-        }
-      ]
-    },
-    "248314272477218@lid": {
-      "lastAt": 1779207715881,
-      "state": "chat",
-      "greetedAt": 1779197785677,
-      "lastNudgeAt": 0,
-      "lastNudgeSig": "",
-      "aiFallbackAt": 1779197801299,
-      "history": [
-        {
-          "dir": "in",
-          "text": "Wholesale please",
-          "at": 1779197781220
-        },
-        {
-          "dir": "in",
-          "text": "Good afternoon",
-          "at": 1779197781659
-        },
-        {
-          "dir": "in",
-          "text": "Atonsu please",
-          "at": 1779197783886
-        },
-        {
-          "dir": "out",
-          "text": "Hello 👋 Welcome to Our Store.\n\nType *Menu* to browse our catalog, or tell me what you’re looking for.",
-          "at": 1779197786218
-        },
-        {
-          "dir": "in",
-          "text": "Ohk",
-          "at": 1779198113704
-        },
-        {
-          "dir": "out",
-          "text": "If you have any specific products or categories in mind, just let me know! I'm here to help.",
-          "at": 1779198119087
-        },
-        {
-          "dir": "in",
-          "text": "Ohk",
-          "at": 1779207706061
-        },
-        {
-          "dir": "out",
-          "text": "Feel free to ask about any products or brands you're interested in!",
-          "at": 1779207715881
-        }
-      ]
     }
   }
 }

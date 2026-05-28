@@ -294,6 +294,19 @@ export async function fetchVendorBotConfig(vendorId: string) {
     .filter((m) => m.id && m.name)
     .slice(0, 20);
 
+  const excludedPeersRaw: unknown[] = Array.isArray((json as any)?.whatsappExcludedPeers) ? ((json as any).whatsappExcludedPeers as unknown[]) : [];
+  const excludedPeers = excludedPeersRaw
+    .filter((x: unknown): x is string => typeof x === "string" && String(x).trim() !== "")
+    .map((x: string) => x.trim())
+    .slice(0, 2000);
+
+  const takeoverAll = Boolean((json as any)?.whatsappTakeoverAll);
+  const takeoverPeersRaw: unknown[] = Array.isArray((json as any)?.whatsappTakeoverPeers) ? ((json as any).whatsappTakeoverPeers as unknown[]) : [];
+  const takeoverPeers = takeoverPeersRaw
+    .filter((x: unknown): x is string => typeof x === "string" && String(x).trim() !== "")
+    .map((x: string) => x.trim())
+    .slice(0, 2000);
+
   const cfg: {
     vendor: { id: number; slug: string; name: string };
     openrouter: { keys: string[]; model: string | null };
@@ -319,6 +332,9 @@ export async function fetchVendorBotConfig(vendorId: string) {
       allowLatest: boolean;
     };
     deliveryOptions: DeliveryOptions;
+    whatsappExcludedPeers: string[];
+    whatsappTakeoverAll: boolean;
+    whatsappTakeoverPeers: string[];
     whatsappGroupSettings: {
       enabled: boolean;
       tagOnly: boolean;
@@ -370,6 +386,9 @@ export async function fetchVendorBotConfig(vendorId: string) {
       notes: deliveryNotes,
       methods: deliveryMethods,
     },
+    whatsappExcludedPeers: excludedPeers,
+    whatsappTakeoverAll: takeoverAll,
+    whatsappTakeoverPeers: takeoverPeers,
     whatsappGroupSettings: {
       enabled: Boolean((json as any)?.whatsappGroupSettings?.enabled),
       tagOnly: typeof (json as any)?.whatsappGroupSettings?.tagOnly === "boolean" ? Boolean((json as any).whatsappGroupSettings.tagOnly) : true,
@@ -3718,6 +3737,25 @@ export function createEllbot(deps: EllbotDeps) {
 
     const vendorCfg = await fetchVendorBotConfig(deps.vendorId);
     if (isExcludedPeer(to, (vendorCfg as any)?.whatsappExcludedPeers)) return;
+    const takeoverAll = Boolean((vendorCfg as any)?.whatsappTakeoverAll);
+    const takeoverPeers = Array.isArray((vendorCfg as any)?.whatsappTakeoverPeers) ? ((vendorCfg as any).whatsappTakeoverPeers as unknown[]) : [];
+    const peerKey = (jid: string) => {
+      const s = String(jid ?? "").trim();
+      if (!s) return "";
+      const left = s.includes("@") ? (s.split("@")[0] ?? s) : s;
+      const digits = left.replace(/[^\d]/g, "");
+      return digits || left;
+    };
+    const takeoverSet = new Set(
+      takeoverPeers
+        .filter((x: unknown): x is string => typeof x === "string" && String(x).trim() !== "")
+        .map((x: string) => peerKey(x))
+        .filter((x: string) => x)
+    );
+    const pausedByTakeover = takeoverAll || takeoverSet.has(peerKey(to));
+    if (pausedByTakeover) {
+      return;
+    }
     const brain = vendorCfg?.whatsappBotBrain;
     const catalogCfg = vendorCfg?.whatsappCatalogSettings;
     const storeName = (brain?.storeName ?? vendorCfg?.vendor?.name ?? "Our Store").trim() || "Our Store";
@@ -3756,6 +3794,54 @@ export function createEllbot(deps: EllbotDeps) {
         ? brain.assistantStyle
         : "balanced";
     const memoryTurns = typeof brain?.memoryTurns === "number" ? brain.memoryTurns : Number(brain?.memoryTurns ?? 6);
+
+    const looksLikeShortReply = (() => {
+      if (session.pendingConfirm) return false;
+      const raw = (text ?? "").toString().trim();
+      if (!raw) return true;
+      const norm = raw
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!norm) return true;
+      if (/\d/.test(norm)) return false;
+      const words = norm.split(" ").filter((w) => w);
+      if (words.length > 3) return false;
+      const phrase = words.join(" ");
+      const okPhrases = new Set([
+        "ok",
+        "okay",
+        "k",
+        "kk",
+        "alright",
+        "thanks",
+        "thank you",
+        "thx",
+        "nice",
+        "cool",
+        "great",
+        "good",
+        "hello",
+        "hi",
+        "hey",
+        "good morning",
+        "good afternoon",
+        "good evening",
+      ]);
+      if (okPhrases.has(phrase)) return true;
+      if (words.length === 1 && okPhrases.has(words[0]!)) return true;
+      return false;
+    })();
+
+    if (looksLikeShortReply && upperText !== "MENU" && upperText !== "SHOW_CATALOG" && upperText !== "RESUME_BOT") {
+      const reply =
+        (typeof brain?.fallback === "string" && brain.fallback.trim()
+          ? brain.fallback.trim()
+          : "Type *Menu* to browse our catalog, or tell me what you’re looking for.") || "Type *Menu* to browse.";
+      await sendMenuAndRemember(to, session, reply, storeName);
+      return;
+    }
 
     const now = nowMs();
     const lastProfileAt = typeof session.profileFetchedAt === "number" && Number.isFinite(session.profileFetchedAt) ? session.profileFetchedAt : 0;
