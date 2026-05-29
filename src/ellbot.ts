@@ -2865,6 +2865,11 @@ export function createEllbot(deps: EllbotDeps) {
       to,
       `🔗 *Payment Link Generated*\n\nOrder: ${session.cart.title}\nQty: ${qty}\nSubtotal: ${formatMoney(session.cart.product.currency, subtotal)}\n${feeCents ? `Delivery: ${formatMoney(session.cart.product.currency, deliveryFee)}\n` : ""}Total: ${formatMoney(session.cart.product.currency, total)}\nRef: ${reference || "N/A"}\n\nPay here: ${authorizationUrl}\n\nAfter payment, reply: *PAID ${reference || ""}*`
     );
+    session.cart = null;
+    session.deliveryMethodId = undefined;
+    session.deliveryMethodName = undefined;
+    session.deliveryFeeCents = undefined;
+    scheduleSave();
   }
 
   function placeholderUrl(label: string) {
@@ -4056,7 +4061,13 @@ export function createEllbot(deps: EllbotDeps) {
           return;
         }
         const status = typeof (json as any)?.order?.status === "string" ? String((json as any).order.status) : "updated";
-        await sendText(to, `✅ Payment confirmed.\nStatus: ${status}\nRef: ${ref}`);
+        session.state = "chat";
+        session.cart = null;
+        session.deliveryMethodId = undefined;
+        session.deliveryMethodName = undefined;
+        session.deliveryFeeCents = undefined;
+        scheduleSave();
+        await sendWithMenu(to, session, `✅ Payment confirmed.\nStatus: ${status}\nRef: ${ref}\n\nTap Menu to continue.`, storeName);
       } catch (e: unknown) {
         deps.onError(e instanceof Error ? e.message : "Payment verify failed.");
         await sendText(to, "❌ Payment verification failed. Please try again shortly.");
@@ -4709,6 +4720,11 @@ export function createEllbot(deps: EllbotDeps) {
           to,
           `✅ Payment request sent to your phone.\nRef: ${reference || "N/A"}${display ? `\n\n${display}` : ""}\n\nAfter authorization, reply: *PAID ${reference || ""}*`
         );
+        session.cart = null;
+        session.deliveryMethodId = undefined;
+        session.deliveryMethodName = undefined;
+        session.deliveryFeeCents = undefined;
+        scheduleSave();
       } catch (e: unknown) {
         deps.onError(e instanceof Error ? e.message : "MoMo charge failed.");
         const canPaystack = Boolean(vendorCfg?.payments?.paystack?.configured);
@@ -4768,6 +4784,11 @@ export function createEllbot(deps: EllbotDeps) {
           to,
           `📌 *${title}*\n\n${mp.instructions.trim()}\n\nItem: *${session.cart?.title ?? "your item"}*\nQty: ${qty}\nTotal: ${session.cart ? formatMoney(session.cart.product.currency, total) : "N/A"}`
         );
+        session.cart = null;
+        session.deliveryMethodId = undefined;
+        session.deliveryMethodName = undefined;
+        session.deliveryFeeCents = undefined;
+        scheduleSave();
         return;
       }
       const shopPhone = (process.env.SHOP_PHONE_NUMBER ?? "233000000000").trim() || "233000000000";
@@ -4775,6 +4796,11 @@ export function createEllbot(deps: EllbotDeps) {
         to,
         `📞 Please call our shop at *${shopPhone}* to complete your order for *${session.cart?.title ?? "your item"}*.\nQty: ${qty}\nSubtotal: ${session.cart ? formatMoney(session.cart.product.currency, subtotal) : "N/A"}\n${feeCents ? `Delivery: ${session.cart ? formatMoney(session.cart.product.currency, deliveryFee) : ""}${method ? ` (${method})` : ""}\n` : ""}Total: ${session.cart ? formatMoney(session.cart.product.currency, total) : "N/A"}`
       );
+      session.cart = null;
+      session.deliveryMethodId = undefined;
+      session.deliveryMethodName = undefined;
+      session.deliveryFeeCents = undefined;
+      scheduleSave();
       return;
     }
 
