@@ -290,6 +290,11 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
     });
   }
 
+  function ensureConnected() {
+    const me = typeof (sock as any)?.user?.id === "string" ? String((sock as any).user.id) : "";
+    if (!me) throw new Error("WhatsApp not connected. Pair the vendor device and try again.");
+  }
+
   const ellbot = createEllbot({
     vendorId,
     sock,
@@ -446,6 +451,7 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
   }
 
   async function sendText(to: string, text: string) {
+    ensureConnected();
     const target = (to ?? "").trim();
     if (!target) throw new Error("Invalid recipient.");
     if (target.includes("@")) {
@@ -461,6 +467,7 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
   }
 
   async function sendButtons(to: string, text: string, buttons: Array<{ id: string; text: string }>) {
+    ensureConnected();
     const target = (to ?? "").trim();
     if (!target) throw new Error("Invalid recipient.");
     const jid = target.includes("@") ? target : jidNormalizedUser(cleanPhone(target).replace("+", "") + "@s.whatsapp.net");
@@ -500,6 +507,7 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
   }
 
   async function sendImage(to: string, imageUrl: string, caption?: string) {
+    ensureConnected();
     const target = (to ?? "").trim();
     if (!target) throw new Error("Invalid recipient.");
     const url = (imageUrl ?? "").trim();
@@ -523,6 +531,7 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
   }
 
   async function sendVideo(to: string, videoUrl: string, caption?: string) {
+    ensureConnected();
     const target = (to ?? "").trim();
     if (!target) throw new Error("Invalid recipient.");
     const url = (videoUrl ?? "").trim();
@@ -551,6 +560,7 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
   }
 
   async function requestPairingCode(phone: string) {
+    ensureConnected();
     const cleaned = cleanPhone(phone).replace("+", "");
     if (!cleaned) throw new Error("Invalid phone.");
     if (!("requestPairingCode" in sock)) throw new Error("Pairing not supported.");
@@ -594,6 +604,7 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
   }
 
   async function sendGroupText(groupId: string, text: string, mentions?: string[]): Promise<string | null> {
+    ensureConnected();
     if (!groupId.endsWith("@g.us")) throw new Error("Invalid group id.");
     const m = Array.isArray(mentions) ? mentions.filter((x) => typeof x === "string" && x.trim()).map((x) => String(x).trim()) : [];
     const r = (await sock.sendMessage(groupId, ({ text, ...(m.length ? { mentions: m } : {}) } as unknown) as any)) as unknown as
@@ -629,6 +640,7 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
   }
 
   async function sendStatusText(text: string, targets?: string[]): Promise<string | null> {
+    ensureConnected();
     const statusJidList = normalizeStatusJidList(targets);
     if (!statusJidList.length) throw new Error("Status post unavailable: no audience yet. Chat with at least one customer first.");
     const r = (await withTimeout(
@@ -663,6 +675,7 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
   }
 
   async function sendGroupImage(groupId: string, imageUrl: string, caption?: string): Promise<string | null> {
+    ensureConnected();
     if (!groupId.endsWith("@g.us")) throw new Error("Invalid group id.");
     const buf = await downloadBuffer(imageUrl);
     const r = (await sock.sendMessage(groupId, { image: buf, caption: caption ?? "" })) as unknown as
@@ -686,6 +699,7 @@ export async function startBaileysRuntime(vendorId: string, sessionDir: string, 
     }>,
     buttonText?: string
   ): Promise<string | null> {
+    ensureConnected();
     if (!groupId.endsWith("@g.us")) throw new Error("Invalid group id.");
     const waBase = getWaMeBase();
     if (!waBase) throw new Error("Cannot build DM link (missing device phone).");
