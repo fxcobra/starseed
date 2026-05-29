@@ -586,14 +586,21 @@ export async function startVendorRuntime(vendorId: string) {
             const firstProductId = Array.isArray(hit.productIds) && hit.productIds.length ? hit.productIds[0] : null;
             const handle = sender.split("@")[0] ?? sender;
             const dmKeyword = firstProductId ? `BUY ${firstProductId}` : "BUY";
-            const groupText = `@${handle} Please DM me "${dmKeyword}" to continue.`;
+            let storeName = "Our Store";
+            try {
+              const cfg = await fetchVendorBotConfig(vendorId);
+              storeName = (cfg?.whatsappBotBrain?.storeName ?? cfg?.vendor?.name ?? "Our Store").trim() || "Our Store";
+            } catch {
+              void 0;
+            }
+            const groupText = `@${handle} To continue, send me a DM with: "${dmKeyword}"`;
             try {
               if (runtime.baileysSendGroupText) await runtime.baileysSendGroupText(groupId, groupText, [sender]);
             } catch {
               void 0;
             }
             try {
-              if (runtime.baileysSend) await runtime.baileysSend(sender, `Hi! To continue, please send: ${dmKeyword}`);
+              if (runtime.baileysSendGroupCtaCard) await runtime.baileysSendGroupCtaCard(groupId, `Continue with ${storeName} in DM`, storeName, dmKeyword, "Continue in DM");
             } catch {
               void 0;
             }
@@ -638,7 +645,7 @@ export async function startVendorRuntime(vendorId: string) {
               if (runtime.baileysSendGroupCtaCard) {
                 try {
                   const prefill = cleaned || "Menu";
-                  await runtime.baileysSendGroupCtaCard(groupId, `Continue with ${storeName} in DM`, "EllTek", prefill, "Continue in DM");
+                  await runtime.baileysSendGroupCtaCard(groupId, `Continue with ${storeName} in DM`, storeName, prefill, "Continue in DM");
                 } catch (e: unknown) {
                   void e;
                 }
@@ -652,7 +659,6 @@ export async function startVendorRuntime(vendorId: string) {
               return;
             }
 
-            if (!runtime.baileysSendGroupProductImages) return;
             if (!cleaned) {
               try {
                 if (runtime.baileysSendGroupText) await runtime.baileysSendGroupText(groupId, `${mentionText}What product are you looking for?`, mentions);
@@ -661,6 +667,65 @@ export async function startVendorRuntime(vendorId: string) {
               }
               return;
             }
+
+            function looksLikeProductQuery(input: string) {
+              const t = input.trim().toLowerCase();
+              if (!t) return false;
+              if (/\b(price|cost|buy|sell|available|availability|how much|show|need|want|looking for|do you have)\b/i.test(t)) return true;
+              if (/\b(iphone|samsung|infinix|tecno|itel|pixel|nokia|laptop|macbook|hp|dell|lenovo|charger|earphone|headphone|airpods|router|modem|tv|ps5|xbox)\b/i.test(t))
+                return true;
+              if (/\b\d{2,}\b/.test(t) && /\b(iphone|samsung|infinix|tecno|itel|pixel|nokia|hp|dell|lenovo)\b/i.test(t)) return true;
+              return false;
+            }
+
+            function buildQuickReply(input: string) {
+              const t = input.trim().toLowerCase();
+              if (!t) return null;
+
+              const delivery = (cfg as any)?.deliveryOptions ?? null;
+              const deliveryNotes = typeof delivery?.notes === "string" ? String(delivery.notes).trim() : "";
+              const deliveryMethods = Array.isArray(delivery?.methods) ? (delivery.methods as any[]) : [];
+              const deliveryMethodsText = deliveryMethods
+                .slice(0, 6)
+                .map((m) => String(m?.name ?? "").trim())
+                .filter((x) => x.length > 0)
+                .join(", ");
+
+              const shopPhoneRaw = typeof (cfg as any)?.whatsappBotBrain?.shopPhone === "string" ? String((cfg as any).whatsappBotBrain.shopPhone).trim() : "";
+
+              if (/\b(hi|hello|hey|good\s*morning|good\s*afternoon|good\s*evening)\b/i.test(t)) {
+                return `Hi! What are you looking for?`;
+              }
+
+              if (/\b(delivery|deliver|shipping|ship|pickup|pick\s*up|location|where\s+are\s+you|where\s+is\s+your\s+shop)\b/i.test(t)) {
+                const parts: string[] = [];
+                if (deliveryNotes) parts.push(deliveryNotes);
+                if (deliveryMethodsText) parts.push(`Delivery methods: ${deliveryMethodsText}`);
+                if (!parts.length) return `We offer delivery. Tell me your location and what item you need.`;
+                return parts.join("\n");
+              }
+
+              if (/\b(payment|pay|momo|mobile\s*money|paystack)\b/i.test(t)) {
+                return `For payment, tell me the item you want and I’ll guide you on the available payment options.`;
+              }
+
+              if (/\b(call|phone|number|contact)\b/i.test(t) && shopPhoneRaw) {
+                return `Shop contact: ${shopPhoneRaw}`;
+              }
+
+              return null;
+            }
+
+            const quick = buildQuickReply(cleaned);
+            if (quick && !looksLikeProductQuery(cleaned)) {
+              try {
+                if (runtime.baileysSendGroupText) await runtime.baileysSendGroupText(groupId, `${mentionText}${quick}`, mentions);
+              } catch {
+                void 0;
+              }
+              return;
+            }
+
             const products = await fetchProductsForVendor(vendorId).catch(() => []);
 
             const openKeys: string[] = Array.isArray((cfg as any)?.openrouter?.keys)
@@ -668,7 +733,124 @@ export async function startVendorRuntime(vendorId: string) {
                   .filter((x: unknown): x is string => typeof x === "string" && x.trim().length > 0)
                   .map((x: string) => x.trim())
               : [];
-            const openModel = typeof (cfg as any)?.openrouter?.model === "string" ? String((cfg as any).openrouter.model).trim() : "";
+            const openModelRaw = typeof (cfg as any)?.openrouter?.model === "string" ? String((cfg as any).openrouter.model).trim() : "";
+            const openModel = openModelRaw || "openai/gpt-4o-mini";
+
+            function storeWebBase() {
+              return (process.env.STORE_WEB_BASE_URL ?? "http://localhost:5173").trim().replace(/\/$/, "");
+            }
+
+            function parseShowProduct(s: string) {
+              const m = String(s ?? "")
+                .trim()
+                .match(/^SHOW_PRODUCT:\s*(\d+)/i);
+              if (!m) return null;
+              const id = Number(m[1]);
+              if (!Number.isFinite(id) || id <= 0) return null;
+              return Math.floor(id);
+            }
+
+            function looksLikeProductList(s: string) {
+              const t = String(s ?? "").trim();
+              if (!t) return false;
+              if (/^\s*\d+\)\s+/m.test(t)) return true;
+              if (/^\s*\d+\.\s+/m.test(t)) return true;
+              return false;
+            }
+
+            async function openRouterSmartReply(input: string): Promise<string | null> {
+              if (!openKeys.length || !openModel) return null;
+              const key = openKeys[Math.floor(Math.random() * openKeys.length)]!;
+
+              const vendorSlug = typeof (cfg as any)?.vendor?.slug === "string" ? String((cfg as any).vendor.slug).trim() : "";
+              const storeUrl = vendorSlug ? `${storeWebBase()}/shop/store/${encodeURIComponent(vendorSlug)}` : "";
+              const delivery = (cfg as any)?.deliveryOptions ?? null;
+              const deliveryNotes = typeof delivery?.notes === "string" ? String(delivery.notes).trim() : "";
+              const deliveryMethods = Array.isArray(delivery?.methods) ? (delivery.methods as any[]) : [];
+              const deliveryText = [
+                deliveryNotes ? deliveryNotes.slice(0, 500) : "",
+                deliveryMethods.length
+                  ? `Delivery methods: ${deliveryMethods
+                      .slice(0, 6)
+                      .map((m) => String(m?.name ?? "").trim())
+                      .filter((x) => x.length > 0)
+                      .join(", ")}`
+                  : "",
+              ]
+                .filter((x) => x)
+                .join("\n");
+              const shopPhoneRaw = typeof (cfg as any)?.whatsappBotBrain?.shopPhone === "string" ? String((cfg as any).whatsappBotBrain.shopPhone).trim() : "";
+              const headline = typeof (cfg as any)?.vendor?.headline === "string" ? String((cfg as any).vendor.headline).trim() : "";
+
+              const catalog = (Array.isArray(products) ? products : [])
+                .slice()
+                .sort((a: any, b: any) => Number(b?.id ?? 0) - Number(a?.id ?? 0))
+                .slice(0, 20)
+                .map((p: any) => ({
+                  id: Number(p?.id ?? 0),
+                  title: String(p?.name ?? "").trim(),
+                  subtitle: typeof p?.brand === "string" && p.brand.trim() ? p.brand.trim().slice(0, 120) : null,
+                  description: typeof p?.description === "string" && p.description.trim() ? p.description.trim().slice(0, 240) : null,
+                  price_cents: Number.isFinite(Number(p?.price)) ? Math.round(Number(p.price) * 100) : null,
+                  currency: typeof p?.currency === "string" && p.currency.trim() ? p.currency.trim() : null,
+                }))
+                .filter((p: any) => Number.isFinite(p.id) && p.id > 0 && typeof p.title === "string" && p.title.trim());
+
+              const cats = Array.from(
+                new Set(
+                  (Array.isArray(products) ? products : [])
+                    .map((p: any) => (typeof p?.category === "string" ? p.category.trim() : ""))
+                    .filter((x: string) => x)
+                )
+              ).slice(0, 20);
+
+              const system =
+                `You are Sarah, a human WhatsApp sales rep for ${storeName}.\n` +
+                `Keep replies short, natural, and helpful.\n` +
+                `Do not greet repeatedly. Only greet if the customer greets.\n` +
+                `Do not use markdown or asterisks. Plain text only.\n` +
+                `Never mention you are an AI.\n` +
+                `Never invent products, prices, stock, delivery fees, or policies.\n` +
+                `If the customer asks what is available, show up to 7 options in this format:\n` +
+                `1) <name> — <currency> <price>\n` +
+                `2) ...\n` +
+                `Do not include product IDs in lists.\n` +
+                `If the customer expresses interest in a specific item (e.g. 'I want iPhone 17'), reply strictly with: SHOW_PRODUCT: <id>\n` +
+                `Do not ask for delivery selection unless the customer asks about delivery.\n` +
+                (storeUrl ? `Store URL (share only if asked): ${storeUrl}\n` : "") +
+                (headline ? `Vendor headline: ${headline}\n` : "") +
+                (shopPhoneRaw ? `Support phone: ${shopPhoneRaw}\n` : "") +
+                (deliveryText ? `Delivery options (only mention if asked):\n${deliveryText}\n` : "") +
+                (cats.length ? `Available categories:\n${cats.join(", ")}\n` : "") +
+                `Catalog JSON:\n` +
+                JSON.stringify(catalog);
+
+              const controller = new AbortController();
+              const timeout = setTimeout(() => controller.abort(), 12_000);
+              try {
+                const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                  method: "POST",
+                  headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+                  body: JSON.stringify({
+                    model: openModel,
+                    messages: [
+                      { role: "system", content: system },
+                      { role: "user", content: input },
+                    ],
+                    temperature: 0.4,
+                    max_tokens: 350,
+                  }),
+                  signal: controller.signal,
+                });
+                const json = (await resp.json().catch(() => null)) as any;
+                const content = String(json?.choices?.[0]?.message?.content ?? "").trim();
+                return content ? content : null;
+              } catch {
+                return null;
+              } finally {
+                clearTimeout(timeout);
+              }
+            }
 
             type Plan =
               | { action: "reply"; reply_text: string }
@@ -814,24 +996,53 @@ export async function startVendorRuntime(vendorId: string) {
               return scored.map((s) => s.p).slice(0, 6);
             }
 
+            const smart = await openRouterSmartReply(cleaned);
+            if (smart) {
+              const showId = parseShowProduct(smart);
+              if (showId) {
+                if (askDmOnly && runtime.baileysSendGroupCtaCard) {
+                  try {
+                    if (tagBack && runtime.baileysSendGroupText) {
+                      await runtime.baileysSendGroupText(groupId, `${mentionText}Tap below to continue.`, mentions);
+                    }
+                  } catch {
+                    void 0;
+                  }
+                  try {
+                    await runtime.baileysSendGroupCtaCard(groupId, `Continue with ${storeName} in DM`, storeName, `VIEW_PRODUCT ${showId}`, "Continue in DM");
+                  } catch {
+                    void 0;
+                  }
+                  return;
+                }
+              } else if (askDmOnly && looksLikeProductList(smart) && runtime.baileysSendGroupCtaCard) {
+                try {
+                  if (tagBack && runtime.baileysSendGroupText) {
+                    await runtime.baileysSendGroupText(groupId, `${mentionText}I found options. Tap below to continue.`, mentions);
+                  }
+                } catch {
+                  void 0;
+                }
+                try {
+                  await runtime.baileysSendGroupCtaCard(groupId, `Continue with ${storeName} in DM`, storeName, cleaned || "Menu", "Continue in DM");
+                } catch {
+                  void 0;
+                }
+                return;
+              } else if (!looksLikeProductList(smart) && !showId) {
+                try {
+                  if (runtime.baileysSendGroupText) await runtime.baileysSendGroupText(groupId, `${mentionText}${smart}`, mentions);
+                } catch {
+                  void 0;
+                }
+                return;
+              }
+            }
+
             const plan = await planWithAi(cleaned);
             if (plan && plan.action === "reply") {
               try {
                 if (runtime.baileysSendGroupText) await runtime.baileysSendGroupText(groupId, `${mentionText}${plan.reply_text}`, mentions);
-              } catch {
-                void 0;
-              }
-              return;
-            }
-
-            if (askDmOnly) {
-              try {
-                if (runtime.baileysSendGroupText)
-                  await runtime.baileysSendGroupText(
-                    groupId,
-                    `${mentionText}I can send options in DM. Please DM me with “${cleaned || "Menu"}” to continue.`,
-                    mentions
-                  );
               } catch {
                 void 0;
               }
@@ -854,6 +1065,27 @@ export async function startVendorRuntime(vendorId: string) {
               }
               return;
             }
+
+            if (askDmOnly) {
+              try {
+                if (tagBack && runtime.baileysSendGroupText) {
+                  await runtime.baileysSendGroupText(groupId, `${mentionText}I found options. Tap below to continue.`, mentions);
+                }
+              } catch {
+                void 0;
+              }
+              if (runtime.baileysSendGroupCtaCard) {
+                try {
+                  const prefill = queryToSearch || cleaned || "Menu";
+                  await runtime.baileysSendGroupCtaCard(groupId, `Continue with ${storeName} in DM`, storeName, prefill, "Continue in DM");
+                } catch {
+                  void 0;
+                }
+              }
+              return;
+            }
+
+            if (!runtime.baileysSendGroupProductImages) return;
             const cards = hits
               .map((p) => ({
                 product_id: typeof p?.id === "number" ? p.id : undefined,

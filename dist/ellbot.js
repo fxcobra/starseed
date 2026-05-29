@@ -3,6 +3,15 @@ import http from "node:http";
 import https from "node:https";
 import fs from "node:fs/promises";
 import path from "node:path";
+const paymentPollTimers = new Map();
+function normalizeGhanaPhone(raw) {
+    const digits = raw.replace(/[^\d]/g, "");
+    if (digits.startsWith("233") && digits.length >= 11)
+        return digits;
+    if (digits.startsWith("0") && digits.length === 10)
+        return `233${digits.slice(1)}`;
+    return digits;
+}
 const storeSlugCache = new Map();
 const vendorBotConfigCache = new Map();
 const productsSource = (process.env.BOT_PRODUCTS_SOURCE ?? "supabase").trim().toLowerCase();
@@ -328,6 +337,21 @@ async function fetchJson(url, timeoutMs) {
 }
 async function postJson(url, body, headers, timeoutMs) {
     return await requestJson(url, "POST", body, headers, timeoutMs);
+}
+function clearCheckout(session) {
+    session.cart = null;
+    session.deliveryMethodId = undefined;
+    session.deliveryMethodName = undefined;
+    session.deliveryFeeCents = undefined;
+    session.deliveryAddress = undefined;
+    session.momoNumber = undefined;
+    session.momoProvider = undefined;
+    session.paymentLink = undefined;
+    session.paymentPoll = undefined;
+}
+async function verifyMarketplacePayment(reference, email) {
+    const url = `${apiBase()}/marketplace/orders/by-reference/${encodeURIComponent(reference)}/verify-payment`;
+    return await postJson(url, { email }, {}, 20_000).catch(() => ({ ok: false, status: 0, json: null }));
 }
 async function fetchStoreSlug(vendorId) {
     const cached = storeSlugCache.get(vendorId);
@@ -1249,7 +1273,11 @@ export function createEllbot(deps) {
                     stateRaw === "awaiting_delivery_address" ||
                     stateRaw === "awaiting_email" ||
                     stateRaw === "selecting_payment_method" ||
+                    stateRaw === "awaiting_payment_confirmation" ||
+                    stateRaw === "awaiting_momo_provider" ||
                     stateRaw === "awaiting_momo_number" ||
+                    stateRaw === "awaiting_momo_confirmation" ||
+                    stateRaw === "awaiting_momo_otp" ||
                     stateRaw === "chat"
                     ? stateRaw
                     : "chat";
@@ -1267,6 +1295,14 @@ export function createEllbot(deps) {
                     cart: null,
                     email: typeof v.email === "string" ? v.email : undefined,
                     momoNumber: typeof v.momoNumber === "string" ? v.momoNumber : undefined,
+                    momoProvider: typeof v.momoProvider === "string" ? v.momoProvider : undefined,
+                    paymentLink: v.paymentLink && typeof v.paymentLink === "object"
+                        ? {
+                            url: typeof v.paymentLink.url === "string" ? String(v.paymentLink.url) : "",
+                            ref: typeof v.paymentLink.ref === "string" ? String(v.paymentLink.ref) : "",
+                            at: typeof v.paymentLink.at === "number" ? v.paymentLink.at : Number(v.paymentLink.at),
+                        }
+                        : undefined,
                     lastReference: typeof v.lastReference === "string" ? v.lastReference : undefined,
                     greetedAt: typeof v.greetedAt === "number" && Number.isFinite(v.greetedAt) ? v.greetedAt : undefined,
                     lastNudgeAt: typeof v.lastNudgeAt === "number" && Number.isFinite(v.lastNudgeAt) ? v.lastNudgeAt : undefined,
@@ -1318,6 +1354,8 @@ export function createEllbot(deps) {
                     state: it.s.state,
                     email: it.s.email,
                     momoNumber: it.s.momoNumber,
+                    momoProvider: it.s.momoProvider,
+                    paymentLink: it.s.paymentLink,
                     lastReference: it.s.lastReference,
                     greetedAt: it.s.greetedAt,
                     lastNudgeAt: it.s.lastNudgeAt,
@@ -2464,7 +2502,7 @@ export function createEllbot(deps) {
         }
         await sendWithCancel(to, session, "Please type your full name:");
     }
-    async function initiateMarketplaceCheckout(to, session) {
+    async function initiateMarketplaceCheckout(to, session, storeName) {
         const store = await fetchStoreSlug(deps.vendorId);
         if (!store || !store.slug)
             throw new Error("Store not found.");
@@ -2505,13 +2543,20 @@ export function createEllbot(deps) {
         const reference = typeof json?.reference === "string" ? String(json.reference).trim() : "";
         if (reference)
             session.lastReference = reference;
-        session.state = "chat";
+        session.paymentLink = { url: authorizationUrl.trim(), ref: reference, at: Date.now() };
+        session.state = "awaiting_payment_confirmation";
+        scheduleSave();
+        startMomoAutoVerify(to, session, storeName);
         const qty = Math.max(1, session.cart.qty || 1);
         const subtotal = Math.max(0, Number.isFinite(session.cart.unitPrice) ? session.cart.unitPrice : 0) * qty;
         const feeCents = typeof session.deliveryFeeCents === "number" && Number.isFinite(session.deliveryFeeCents) ? Math.max(0, Math.round(session.deliveryFeeCents)) : 0;
         const deliveryFee = feeCents / 100;
         const total = subtotal + deliveryFee;
-        await sendText(to, `🔗 *Payment Link Generated*\n\nOrder: ${session.cart.title}\nQty: ${qty}\nSubtotal: ${formatMoney(session.cart.product.currency, subtotal)}\n${feeCents ? `Delivery: ${formatMoney(session.cart.product.currency, deliveryFee)}\n` : ""}Total: ${formatMoney(session.cart.product.currency, total)}\nRef: ${reference || "N/A"}\n\nPay here: ${authorizationUrl}\n\nAfter payment, reply: *PAID ${reference || ""}*`);
+        await sendChoiceCard(to, `🔗 *Payment Link*\n\nOrder: ${session.cart.title}\nQty: ${qty}\nTotal: ${formatMoney(session.cart.product.currency, total)}\nRef: ${reference || "N/A"}\n\nPay here:\n${authorizationUrl}\n\nAfter paying, confirm here.`, [
+            { label: "I've Paid", id: "CONFIRM_PAID" },
+            { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
+            { label: "Menu", id: "SHOW_CATALOG" },
+        ], storeName);
     }
     function placeholderUrl(label) {
         const safe = (label ?? "").trim().slice(0, 60) || "Item";
@@ -2650,6 +2695,57 @@ export function createEllbot(deps) {
             catch {
             }
         }
+    }
+    function startMomoAutoVerify(to, session, storeName) {
+        const ref = (session.lastReference ?? "").trim();
+        const email = (session.email ?? "").trim();
+        if (!ref || !email)
+            return;
+        const existing = paymentPollTimers.get(to);
+        if (existing) {
+            try {
+                clearTimeout(existing);
+            }
+            catch {
+                void 0;
+            }
+        }
+        if (!session.paymentPoll || session.paymentPoll.ref !== ref) {
+            session.paymentPoll = { ref, startedAt: Date.now(), tries: 0 };
+        }
+        scheduleSave();
+        const attempt = async () => {
+            const poll = session.paymentPoll;
+            if (!poll || poll.ref !== ref)
+                return;
+            if (session.state !== "awaiting_momo_confirmation" && session.state !== "awaiting_payment_confirmation")
+                return;
+            if (Date.now() - poll.startedAt > 120_000 || poll.tries >= 18) {
+                session.paymentPoll = undefined;
+                scheduleSave();
+                await sendChoiceCard(to, `⏳ Still waiting for payment confirmation.\n\nIf the prompt doesn’t arrive, use *Payment Link* instead.`, [
+                    { label: "Payment Link", id: "PAY_LINK" },
+                    { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
+                    { label: "Menu", id: "SHOW_CATALOG" },
+                ], storeName);
+                return;
+            }
+            poll.tries += 1;
+            scheduleSave();
+            const { ok, json } = await verifyMarketplacePayment(ref, email);
+            if (ok) {
+                const status = typeof json?.order?.status === "string" ? String(json.order.status) : "processing";
+                session.state = "chat";
+                clearCheckout(session);
+                scheduleSave();
+                await sendWithMenu(to, session, `✅ Payment confirmed.\nStatus: ${status}\nRef: ${ref}\n\nTap Menu to continue.`, storeName);
+                return;
+            }
+            const t = setTimeout(() => void attempt(), 6500);
+            paymentPollTimers.set(to, t);
+        };
+        const t = setTimeout(() => void attempt(), 3500);
+        paymentPollTimers.set(to, t);
     }
     async function sendOptionsButtons(to, title, options, footerText) {
         const list = Array.isArray(options) ? options.filter((o) => o && o.id && o.label) : [];
@@ -3571,12 +3667,21 @@ export function createEllbot(deps) {
             await sendText(to, `🛑 Action cancelled. How else can ${storeName} help you today?`);
             return;
         }
-        if (upperText.startsWith("PAID")) {
-            const refFromText = text.replace(/^paid\s*/i, "").trim();
-            const ref = refFromText || (session.lastReference ?? "").trim();
+        if (upperText === "ORDER_DONE") {
+            session.state = "chat";
+            session.cart = null;
+            session.deliveryMethodId = undefined;
+            session.deliveryMethodName = undefined;
+            session.deliveryFeeCents = undefined;
+            scheduleSave();
+            await sendWithMenu(to, session, `✅ Noted.\n\nTap Menu to continue.`, storeName);
+            return;
+        }
+        if (upperText === "CONFIRM_PAID" || upperText.startsWith("PAID")) {
+            const ref = (session.lastReference ?? "").trim();
             const email = (session.email ?? "").trim();
             if (!ref) {
-                await sendText(to, "Please reply with your reference like: *PAID PSK_...*");
+                await sendWithCancel(to, session, "I don’t have your payment reference yet. Please restart checkout from Menu to generate a new payment link.");
                 return;
             }
             if (!email) {
@@ -3589,11 +3694,14 @@ export function createEllbot(deps) {
                 const { ok, json } = await postJson(url, { email }, {}, 20_000);
                 if (!ok) {
                     const msg = typeof json?.message === "string" ? json.message : "Payment verification failed.";
-                    await sendText(to, `❌ ${msg}`);
+                    await sendWithCancel(to, session, `❌ ${msg}\n\nIf you’ve already paid, try again in a minute.`);
                     return;
                 }
                 const status = typeof json?.order?.status === "string" ? String(json.order.status) : "updated";
-                await sendText(to, `✅ Payment confirmed.\nStatus: ${status}\nRef: ${ref}`);
+                session.state = "chat";
+                clearCheckout(session);
+                scheduleSave();
+                await sendWithMenu(to, session, `✅ Payment confirmed.\nStatus: ${status}\nRef: ${ref}\n\nTap Menu to continue.`, storeName);
             }
             catch (e) {
                 deps.onError(e instanceof Error ? e.message : "Payment verify failed.");
@@ -4102,6 +4210,19 @@ export function createEllbot(deps) {
                 await sendWithMenu(to, session, "Paystack payment is not available for this store right now. Please select Manual payment.", storeName);
                 return;
             }
+            const existing = session.paymentLink;
+            if (existing &&
+                typeof existing.url === "string" &&
+                existing.url.trim() &&
+                typeof existing.at === "number" &&
+                Date.now() - existing.at < 30 * 60_000) {
+                await sendChoiceCard(to, `🔗 *Payment Link*\n\nRef: ${existing.ref || "N/A"}\n\nPay here:\n${existing.url.trim()}\n\nAfter paying, confirm here.`, [
+                    { label: "I've Paid", id: "CONFIRM_PAID" },
+                    { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
+                    { label: "Menu", id: "SHOW_CATALOG" },
+                ], storeName);
+                return;
+            }
             if (await maybeTriggerHandoff(to, session, vendorCfg, storeName, "before_payment", {
                 title: session.cart?.title ?? "",
                 product_id: session.cart?.product?.id ?? null,
@@ -4130,7 +4251,7 @@ export function createEllbot(deps) {
                 return;
             }
             try {
-                await initiateMarketplaceCheckout(to, session);
+                await initiateMarketplaceCheckout(to, session, storeName);
             }
             catch (e) {
                 await sendText(to, "❌ Checkout failed. Please try again.");
@@ -4166,14 +4287,64 @@ export function createEllbot(deps) {
                 await promptEmail(to, session, storeName);
                 return;
             }
-            session.state = "awaiting_momo_number";
-            await sendText(to, "📲 Please enter your MoMo number (e.g., 054XXXXXXX):");
+            session.state = "awaiting_momo_provider";
+            scheduleSave();
+            await sendChoiceCard(to, "Select your Mobile Money network:", [
+                { label: "MTN MoMo", id: "MOMO_PROVIDER_MTN" },
+                { label: "Telecel Cash", id: "MOMO_PROVIDER_VOD" },
+                { label: "AirtelTigo Money", id: "MOMO_PROVIDER_ATL" },
+            ], storeName);
             return;
+        }
+        if (session.state === "awaiting_momo_provider") {
+            if (upperText === "MOMO_PROVIDER_MTN" || upperText === "MOMO_PROVIDER_VOD" || upperText === "MOMO_PROVIDER_ATL") {
+                const provider = upperText === "MOMO_PROVIDER_VOD" ? "vod" : upperText === "MOMO_PROVIDER_ATL" ? "atl" : "mtn";
+                session.momoProvider = provider;
+                scheduleSave();
+                if (provider !== "mtn") {
+                    if (!vendorCfg?.payments?.paystack?.configured) {
+                        await sendWithMenu(to, session, "Paystack payment is not available for this store right now. Please select Manual payment.", storeName);
+                        return;
+                    }
+                    try {
+                        await initiateMarketplaceCheckout(to, session, storeName);
+                    }
+                    catch (e) {
+                        deps.onError(e instanceof Error ? e.message : "Pay link failed.");
+                        await sendWithMenu(to, session, "❌ Could not generate a payment link. Please try again.", storeName);
+                    }
+                    return;
+                }
+                session.state = "awaiting_momo_number";
+                scheduleSave();
+                await sendText(to, "📲 Please enter your MTN MoMo number (e.g., 054XXXXXXX):");
+                return;
+            }
+            await sendWithCancel(to, session, "Please use the buttons above to pick your network.");
+            return;
+        }
+        if (session.state === "awaiting_momo_confirmation") {
+            if (upperText === "CONFIRM_PAID" || upperText === "CANCEL_CHECKOUT" || upperText === "PAY_LINK" || upperText === "SHOW_CATALOG") {
+            }
+            else {
+                startMomoAutoVerify(to, session, storeName);
+                await sendWithCancel(to, session, "⏳ Please complete the payment prompt on your phone. Then confirm here.");
+                return;
+            }
+        }
+        if (session.state === "awaiting_payment_confirmation") {
+            if (upperText === "CONFIRM_PAID" || upperText.startsWith("PAID") || upperText === "CANCEL_CHECKOUT" || upperText === "PAY_LINK" || upperText === "SHOW_CATALOG") {
+            }
+            else {
+                startMomoAutoVerify(to, session, storeName);
+                await sendWithCancel(to, session, "⏳ Please complete payment using the link, then confirm here.");
+                return;
+            }
         }
         if (session.state === "awaiting_momo_number") {
             session.momoNumber = text.trim();
-            session.state = "chat";
-            await sendText(to, `🔐 *SECURITY NOTE:* Your PIN is never saved or seen by ${storeName} or any 3rd party.\n\nPlease authorize the prompt on your phone and delete the OTP message immediately after.`);
+            session.state = "awaiting_momo_confirmation";
+            scheduleSave();
             try {
                 if (!(await ensureValidQtyOrPrompt(to, session)))
                     return;
@@ -4186,13 +4357,13 @@ export function createEllbot(deps) {
                 const email = (session.email ?? "").trim();
                 if (!email)
                     throw new Error("Missing email.");
-                const momo = (session.momoNumber ?? "").trim();
+                const momo = normalizeGhanaPhone((session.momoNumber ?? "").trim());
                 const body = {
                     store_slug: store.slug,
                     name: name || undefined,
                     email,
                     momo,
-                    provider: "mtn",
+                    provider: (session.momoProvider ?? "mtn").trim() || "mtn",
                     shipping: {
                         method: typeof session.deliveryMethodId === "string" && session.deliveryMethodId.trim() ? session.deliveryMethodId.trim() : undefined,
                         fee_cents: typeof session.deliveryFeeCents === "number" && Number.isFinite(session.deliveryFeeCents) ? Math.max(0, Math.round(session.deliveryFeeCents)) : 0,
@@ -4216,14 +4387,93 @@ export function createEllbot(deps) {
                 if (reference)
                     session.lastReference = reference;
                 const display = typeof json?.display_text === "string" ? String(json.display_text).trim() : "";
-                await sendText(to, `✅ Payment request sent to your phone.\nRef: ${reference || "N/A"}${display ? `\n\n${display}` : ""}\n\nAfter authorization, reply: *PAID ${reference || ""}*`);
+                const chargeStatus = typeof json?.charge_status === "string" ? String(json.charge_status).trim().toLowerCase() : "";
+                if (chargeStatus === "send_otp") {
+                    session.state = "awaiting_momo_otp";
+                    scheduleSave();
+                    await sendWithCancel(to, session, "🔐 Please enter the OTP you received to complete this payment.");
+                    return;
+                }
+                if (chargeStatus === "send_pin") {
+                    session.state = "awaiting_payment_confirmation";
+                    scheduleSave();
+                    await sendChoiceCard(to, `This payment needs an extra step we can’t complete here.\n\nPlease use *Payment Link* instead.\n\nRef: ${reference || "N/A"}`, [
+                        { label: "Payment Link", id: "PAY_LINK" },
+                        { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
+                        { label: "Menu", id: "SHOW_CATALOG" },
+                    ], storeName);
+                    return;
+                }
+                startMomoAutoVerify(to, session, storeName);
+                await sendChoiceCard(to, `✅ A payment prompt has been sent to your phone.\nRef: ${reference || "N/A"}${display ? `\n\n${display}` : ""}\n\nApprove it on your phone, then confirm here.`, [
+                    { label: "I've Paid", id: "CONFIRM_PAID" },
+                    { label: "Payment Link", id: "PAY_LINK" },
+                    { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
+                    { label: "Menu", id: "SHOW_CATALOG" },
+                ], storeName);
             }
             catch (e) {
                 deps.onError(e instanceof Error ? e.message : "MoMo charge failed.");
                 const canPaystack = Boolean(vendorCfg?.payments?.paystack?.configured);
                 await sendWithMenu(to, session, canPaystack
-                    ? "❌ Direct MoMo charge failed. Please use the Paystack Link option instead (or tap Menu to browse)."
+                    ? "❌ Direct MoMo charge failed. Please use the Paystack Link option instead."
                     : "❌ Direct MoMo charge failed. Please use Manual payment instead (or tap Menu to browse).", storeName);
+            }
+            return;
+        }
+        if (session.state === "awaiting_momo_otp") {
+            const otp = text.replace(/[^\d]/g, "").trim();
+            const ref = (session.lastReference ?? "").trim();
+            const email = (session.email ?? "").trim();
+            if (!ref || !email) {
+                session.state = "awaiting_payment_confirmation";
+                scheduleSave();
+                await sendChoiceCard(to, "OTP session expired. Please use Payment Link instead.", [
+                    { label: "Payment Link", id: "PAY_LINK" },
+                    { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
+                    { label: "Menu", id: "SHOW_CATALOG" },
+                ], storeName);
+                return;
+            }
+            if (!otp || otp.length < 4 || otp.length > 10) {
+                await sendWithCancel(to, session, "Please enter the OTP digits you received.");
+                return;
+            }
+            try {
+                const url = `${apiBase()}/marketplace/orders/by-reference/${encodeURIComponent(ref)}/submit-otp`;
+                const { ok, json } = await postJson(url, { email, otp }, {}, 25_000);
+                if (!ok) {
+                    const msg = typeof json?.message === "string" ? String(json.message) : "OTP submission failed.";
+                    await sendChoiceCard(to, `❌ ${msg}\n\nUse Payment Link instead.`, [
+                        { label: "Payment Link", id: "PAY_LINK" },
+                        { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
+                        { label: "Menu", id: "SHOW_CATALOG" },
+                    ], storeName);
+                    return;
+                }
+                const chargeStatus = typeof json?.charge_status === "string" ? String(json.charge_status).trim().toLowerCase() : "";
+                const display = typeof json?.display_text === "string" ? String(json.display_text).trim() : "";
+                if (chargeStatus === "send_otp") {
+                    await sendWithCancel(to, session, `❌ OTP not accepted.${display ? `\n\n${display}` : ""}\n\nPlease enter the OTP again:`);
+                    return;
+                }
+                session.state = "awaiting_momo_confirmation";
+                scheduleSave();
+                startMomoAutoVerify(to, session, storeName);
+                await sendChoiceCard(to, `✅ OTP received.${display ? `\n\n${display}` : ""}\n\nIf you get a prompt on your phone, approve it. Then confirm here.`, [
+                    { label: "I've Paid", id: "CONFIRM_PAID" },
+                    { label: "Payment Link", id: "PAY_LINK" },
+                    { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
+                    { label: "Menu", id: "SHOW_CATALOG" },
+                ], storeName);
+            }
+            catch (e) {
+                deps.onError(e instanceof Error ? e.message : "OTP submit failed.");
+                await sendChoiceCard(to, "❌ OTP submission failed. Please use Payment Link instead.", [
+                    { label: "Payment Link", id: "PAY_LINK" },
+                    { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
+                    { label: "Menu", id: "SHOW_CATALOG" },
+                ], storeName);
             }
             return;
         }
@@ -4266,11 +4516,20 @@ export function createEllbot(deps) {
             const method = typeof session.deliveryMethodName === "string" && session.deliveryMethodName.trim() ? session.deliveryMethodName.trim() : "";
             if (mp?.enabled && (mp.instructions ?? "").trim()) {
                 const title = (mp.title ?? "Manual payment").trim() || "Manual payment";
-                await sendText(to, `📌 *${title}*\n\n${mp.instructions.trim()}\n\nItem: *${session.cart?.title ?? "your item"}*\nQty: ${qty}\nTotal: ${session.cart ? formatMoney(session.cart.product.currency, total) : "N/A"}`);
+                await sendChoiceCard(to, `📌 *${title}*\n\n${mp.instructions.trim()}\n\nItem: *${session.cart?.title ?? "your item"}*\nQty: ${qty}\nTotal: ${session.cart ? formatMoney(session.cart.product.currency, total) : "N/A"}\n\nWhen done, tap *Done* below.`, [
+                    { label: "Done", id: "ORDER_DONE" },
+                    { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
+                    { label: "Menu", id: "SHOW_CATALOG" },
+                ], storeName);
                 return;
             }
             const shopPhone = (process.env.SHOP_PHONE_NUMBER ?? "233000000000").trim() || "233000000000";
             await sendText(to, `📞 Please call our shop at *${shopPhone}* to complete your order for *${session.cart?.title ?? "your item"}*.\nQty: ${qty}\nSubtotal: ${session.cart ? formatMoney(session.cart.product.currency, subtotal) : "N/A"}\n${feeCents ? `Delivery: ${session.cart ? formatMoney(session.cart.product.currency, deliveryFee) : ""}${method ? ` (${method})` : ""}\n` : ""}Total: ${session.cart ? formatMoney(session.cart.product.currency, total) : "N/A"}`);
+            await sendChoiceCard(to, "When you’re done, tap *Done* below (or cancel).", [
+                { label: "Done", id: "ORDER_DONE" },
+                { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
+                { label: "Menu", id: "SHOW_CATALOG" },
+            ], storeName);
             return;
         }
         const products = await fetchProductsForVendorCached(deps.vendorId);

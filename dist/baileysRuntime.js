@@ -264,6 +264,11 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
             });
         });
     }
+    function ensureConnected() {
+        const me = typeof sock?.user?.id === "string" ? String(sock.user.id) : "";
+        if (!me)
+            throw new Error("WhatsApp not connected. Pair the vendor device and try again.");
+    }
     const ellbot = createEllbot({
         vendorId,
         sock,
@@ -431,6 +436,7 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
         }
     }
     async function sendText(to, text) {
+        ensureConnected();
         const target = (to ?? "").trim();
         if (!target)
             throw new Error("Invalid recipient.");
@@ -447,6 +453,7 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
         await sock.sendMessage(jid, { text });
     }
     async function sendButtons(to, text, buttons) {
+        ensureConnected();
         const target = (to ?? "").trim();
         if (!target)
             throw new Error("Invalid recipient.");
@@ -479,6 +486,7 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
         await sock.relayMessage(jid, msg.message, { messageId: msg.key.id });
     }
     async function sendImage(to, imageUrl, caption) {
+        ensureConnected();
         const target = (to ?? "").trim();
         if (!target)
             throw new Error("Invalid recipient.");
@@ -506,6 +514,7 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
         await sock.sendMessage(jid, content);
     }
     async function sendVideo(to, videoUrl, caption) {
+        ensureConnected();
         const target = (to ?? "").trim();
         if (!target)
             throw new Error("Invalid recipient.");
@@ -537,6 +546,7 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
         await sock.sendMessage(jid, content);
     }
     async function requestPairingCode(phone) {
+        ensureConnected();
         const cleaned = cleanPhone(phone).replace("+", "");
         if (!cleaned)
             throw new Error("Invalid phone.");
@@ -582,6 +592,7 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
         return Array.from(new Set(ids)).slice(0, 40);
     }
     async function sendGroupText(groupId, text, mentions) {
+        ensureConnected();
         if (!groupId.endsWith("@g.us"))
             throw new Error("Invalid group id.");
         const m = Array.isArray(mentions) ? mentions.filter((x) => typeof x === "string" && x.trim()).map((x) => String(x).trim()) : [];
@@ -616,6 +627,7 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
         return Array.from(new Set(list)).slice(0, 256);
     }
     async function sendStatusText(text, targets) {
+        ensureConnected();
         const statusJidList = normalizeStatusJidList(targets);
         if (!statusJidList.length)
             throw new Error("Status post unavailable: no audience yet. Chat with at least one customer first.");
@@ -647,6 +659,7 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
         throw new Error("Media download failed.");
     }
     async function sendGroupImage(groupId, imageUrl, caption) {
+        ensureConnected();
         if (!groupId.endsWith("@g.us"))
             throw new Error("Invalid group id.");
         const buf = await downloadBuffer(imageUrl);
@@ -655,6 +668,7 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
         return typeof id === "string" && id.trim() ? id : null;
     }
     async function sendGroupProductImages(groupId, bodyText, footerText, cards, buttonText) {
+        ensureConnected();
         if (!groupId.endsWith("@g.us"))
             throw new Error("Invalid group id.");
         const waBase = getWaMeBase();
