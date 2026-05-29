@@ -4820,10 +4820,27 @@ export function createEllbot(deps: EllbotDeps) {
 
     if (session.state === "awaiting_momo_provider") {
       if (upperText === "MOMO_PROVIDER_MTN" || upperText === "MOMO_PROVIDER_VOD" || upperText === "MOMO_PROVIDER_ATL") {
-        session.momoProvider = upperText === "MOMO_PROVIDER_VOD" ? "vod" : upperText === "MOMO_PROVIDER_ATL" ? "atl" : "mtn";
+        const provider = upperText === "MOMO_PROVIDER_VOD" ? "vod" : upperText === "MOMO_PROVIDER_ATL" ? "atl" : "mtn";
+        session.momoProvider = provider;
+        scheduleSave();
+
+        if (provider !== "mtn") {
+          if (!vendorCfg?.payments?.paystack?.configured) {
+            await sendWithMenu(to, session, "Paystack payment is not available for this store right now. Please select Manual payment.", storeName);
+            return;
+          }
+          try {
+            await initiateMarketplaceCheckout(to, session, storeName);
+          } catch (e: unknown) {
+            deps.onError(e instanceof Error ? e.message : "Pay link failed.");
+            await sendWithMenu(to, session, "❌ Could not generate a payment link. Please try again.", storeName);
+          }
+          return;
+        }
+
         session.state = "awaiting_momo_number";
         scheduleSave();
-        await sendText(to, "📲 Please enter your MoMo number (e.g., 054XXXXXXX):");
+        await sendText(to, "📲 Please enter your MTN MoMo number (e.g., 054XXXXXXX):");
         return;
       }
       await sendWithCancel(to, session, "Please use the buttons above to pick your network.");
