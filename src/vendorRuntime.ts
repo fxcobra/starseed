@@ -586,14 +586,21 @@ export async function startVendorRuntime(vendorId: string) {
             const firstProductId = Array.isArray(hit.productIds) && hit.productIds.length ? hit.productIds[0] : null;
             const handle = sender.split("@")[0] ?? sender;
             const dmKeyword = firstProductId ? `BUY ${firstProductId}` : "BUY";
-            const groupText = `@${handle} Please DM me "${dmKeyword}" to continue.`;
+            let storeName = "Our Store";
+            try {
+              const cfg = await fetchVendorBotConfig(vendorId);
+              storeName = (cfg?.whatsappBotBrain?.storeName ?? cfg?.vendor?.name ?? "Our Store").trim() || "Our Store";
+            } catch {
+              void 0;
+            }
+            const groupText = `@${handle} To continue, send me a DM with: "${dmKeyword}"`;
             try {
               if (runtime.baileysSendGroupText) await runtime.baileysSendGroupText(groupId, groupText, [sender]);
             } catch {
               void 0;
             }
             try {
-              if (runtime.baileysSend) await runtime.baileysSend(sender, `Hi! To continue, please send: ${dmKeyword}`);
+              if (runtime.baileysSendGroupCtaCard) await runtime.baileysSendGroupCtaCard(groupId, `Continue with ${storeName} in DM`, storeName, dmKeyword, "Continue in DM");
             } catch {
               void 0;
             }
@@ -638,7 +645,7 @@ export async function startVendorRuntime(vendorId: string) {
               if (runtime.baileysSendGroupCtaCard) {
                 try {
                   const prefill = cleaned || "Menu";
-                  await runtime.baileysSendGroupCtaCard(groupId, `Continue with ${storeName} in DM`, "EllTek", prefill, "Continue in DM");
+                  await runtime.baileysSendGroupCtaCard(groupId, `Continue with ${storeName} in DM`, storeName, prefill, "Continue in DM");
                 } catch (e: unknown) {
                   void e;
                 }
