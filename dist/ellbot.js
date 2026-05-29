@@ -3,67 +3,6 @@ import http from "node:http";
 import https from "node:https";
 import fs from "node:fs/promises";
 import path from "node:path";
-// #region debug-point A:init
-const __dbg = (() => {
-    let cfg = null;
-    let loadP = null;
-    const readEnv = async () => {
-        const directUrl = typeof process.env.DEBUG_SERVER_URL === "string" ? process.env.DEBUG_SERVER_URL.trim() : "";
-        const directSession = typeof process.env.DEBUG_SESSION_ID === "string" ? process.env.DEBUG_SESSION_ID.trim() : "";
-        if (directUrl && directSession)
-            return { url: directUrl, sessionId: directSession };
-        const candidates = [
-            path.resolve(process.cwd(), ".dbg", "bot-pause-chatlogs.env"),
-            path.resolve(process.cwd(), "..", ".dbg", "bot-pause-chatlogs.env"),
-            path.resolve(process.cwd(), "..", "..", ".dbg", "bot-pause-chatlogs.env"),
-        ];
-        for (const p of candidates) {
-            try {
-                const raw = await fs.readFile(p, "utf8");
-                const url = raw.match(/DEBUG_SERVER_URL=(.+)/)?.[1]?.trim() ?? "";
-                const sessionId = raw.match(/DEBUG_SESSION_ID=(.+)/)?.[1]?.trim() ?? "";
-                if (url && sessionId)
-                    return { url, sessionId };
-            }
-            catch {
-                void 0;
-            }
-        }
-        return null;
-    };
-    const ensure = async () => {
-        if (cfg)
-            return cfg;
-        if (!loadP)
-            loadP = readEnv();
-        cfg = await loadP;
-        return cfg;
-    };
-    return (e) => {
-        if (typeof globalThis.fetch !== "function")
-            return;
-        void ensure().then((c) => {
-            if (!c)
-                return;
-            globalThis
-                .fetch(c.url, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    sessionId: c.sessionId,
-                    runId: e.runId,
-                    hypothesisId: e.hypothesisId,
-                    location: e.location,
-                    msg: e.msg,
-                    data: e.data ?? {},
-                    traceId: e.traceId,
-                    ts: Date.now(),
-                }),
-            })
-                .catch(() => void 0);
-        });
-    };
-})();
 const storeSlugCache = new Map();
 const vendorBotConfigCache = new Map();
 const productsSource = (process.env.BOT_PRODUCTS_SOURCE ?? "supabase").trim().toLowerCase();
@@ -307,6 +246,24 @@ async function createHandoff(vendorId, payload) {
     const idRaw = json?.handoff_id;
     const id = typeof idRaw === "number" ? idRaw : Number(idRaw);
     return Number.isFinite(id) ? Math.floor(id) : null;
+}
+async function createProductRequest(vendorId, payload) {
+    const base = apiBase();
+    const secret = (process.env.BOT_SERVER_SECRET ?? "").trim();
+    const url = `${base}/internal/bot/product-requests/${encodeURIComponent(vendorId)}`;
+    const { ok, status, json } = await requestJson(url, "POST", payload, secret ? { "x-bot-secret": secret } : {}, 6_000).catch(() => ({
+        ok: false,
+        status: 0,
+        json: null,
+    }));
+    if (!ok || !json || typeof json !== "object") {
+        const msg = json && typeof json?.message === "string" ? String(json.message).trim().slice(0, 180) : null;
+        return { ok: false, status: typeof status === "number" ? status : 0, message: msg, request_id: null };
+    }
+    const idRaw = json?.request_id;
+    const id = typeof idRaw === "number" ? idRaw : Number(idRaw);
+    const rid = Number.isFinite(id) ? Math.floor(id) : null;
+    return { ok: true, status: typeof status === "number" ? status : 200, message: null, request_id: rid };
 }
 async function requestJson(url, method, body, headers, timeoutMs) {
     const u = new URL(url);
@@ -1498,6 +1455,53 @@ export function createEllbot(deps) {
         await sendWithMenu(to, session, text, footerText);
         pushHistory(session, "out", text);
     }
+    function parseBudgetText(text, defaultCurrency) {
+        const raw = (text ?? "").trim();
+        if (!raw)
+            return null;
+        const curMatch = raw.match(/\b(ghs|usd|eur|gbp|ngn|kes|zar|cad|aud|inr|cny|jpy)\b/i);
+        const sym = raw.match(/[€£$₦₵]/);
+        const currency = (curMatch ? String(curMatch[1]).trim().toUpperCase() : "") ||
+            (sym && sym[0] === "₦"
+                ? "NGN"
+                : sym && sym[0] === "$"
+                    ? "USD"
+                    : sym && sym[0] === "€"
+                        ? "EUR"
+                        : sym && sym[0] === "£"
+                            ? "GBP"
+                            : sym && (sym[0] === "₵" || sym[0] === "GH₵")
+                                ? "GHS"
+                                : "") ||
+            (defaultCurrency ?? "GHS").trim().toUpperCase() ||
+            "GHS";
+        const m = raw.replace(/,/g, "").match(/(\d+(?:\.\d{1,2})?)/);
+        if (!m)
+            return null;
+        const n = Number(m[1]);
+        if (!Number.isFinite(n) || n <= 0)
+            return null;
+        const cents = Math.round(n * 100);
+        return { currency, cents };
+    }
+    async function offerRequestFromNoMatches(to, session, query, storeName) {
+        const q = (query ?? "").trim().slice(0, 220);
+        if (!q) {
+            await sendWithMenu(to, session, "I couldn't find any exact matches. Tap Menu to browse.", storeName);
+            pushHistory(session, "out", "I couldn't find any exact matches. Tap Menu to browse.");
+            return;
+        }
+        session.pendingRequest = { query: q };
+        session.state = "awaiting_request_confirm";
+        scheduleSave();
+        const body = `I couldn't find any exact matches for *${q}*.\n\nShould I request it for you?`;
+        await sendChoiceCard(to, body, [
+            { label: "Request it", id: "REQ_YES" },
+            { label: "No", id: "REQ_NO" },
+            { label: "Menu", id: "SHOW_CATALOG" },
+        ], storeName);
+        pushHistory(session, "out", body);
+    }
     async function sendWithCancel(to, session, text) {
         if (session.cart) {
             await sendChoiceCard(to, text, [{ label: "Cancel Order", id: "CANCEL_CHECKOUT" }], "EllTek");
@@ -2104,7 +2108,7 @@ export function createEllbot(deps) {
                             await sendCatalogPage(args.to, args.session, args.products, 0);
                             return;
                         }
-                        await sendMenuAndRemember(args.to, args.session, `I couldn't find any exact matches for *${planned.query}*. Tap Menu to browse.`, args.storeName);
+                        await offerRequestFromNoMatches(args.to, args.session, planned.query, args.storeName);
                         return;
                     }
                 }
@@ -2145,7 +2149,7 @@ export function createEllbot(deps) {
                             await sendCatalogPage(args.to, args.session, args.products, 0);
                             return;
                         }
-                        await sendMenuAndRemember(args.to, args.session, `I'm sorry, I just checked the system and we don't have exactly what you're looking for right now.`, args.storeName);
+                        await offerRequestFromNoMatches(args.to, args.session, queryToSearch, args.storeName);
                         return;
                     }
                 }
@@ -2207,7 +2211,7 @@ export function createEllbot(deps) {
                 await sendCatalogPage(args.to, args.session, args.products, 0);
                 return;
             }
-            await sendMenuAndRemember(args.to, args.session, query ? `I couldn't find any exact matches for *${query}*. Tap Menu to browse.` : "Tap Menu to browse.", args.storeName);
+            await offerRequestFromNoMatches(args.to, args.session, query || brand || args.input, args.storeName);
             return;
         }
         await sendAndRemember(args.to, args.session, "Please try again.");
@@ -2631,7 +2635,21 @@ export function createEllbot(deps) {
                 },
             },
         }, { userJid: deps.sock.user?.id });
-        await deps.withTimeout(deps.sock.relayMessage(to, msg.message, { messageId: msg.key?.id }), 25_000, "Choice relay timed out.");
+        try {
+            await deps.withTimeout(deps.sock.relayMessage(to, msg.message, { messageId: msg.key?.id }), 25_000, "Choice relay timed out.");
+        }
+        catch (e) {
+            const lines = (Array.isArray(choices) ? choices : [])
+                .filter((c) => c && c.id && c.label)
+                .slice(0, 3)
+                .map((c, i) => `${i + 1}) ${(c.label ?? "").toString().trim()}`);
+            const fallback = `${(body ?? "").toString().trim()}\n\n${lines.join("\n")}`.trim().slice(0, 1600);
+            try {
+                await deps.withTimeout(deps.sock.sendMessage(to, { text: fallback }), 25_000, "Send timed out.");
+            }
+            catch {
+            }
+        }
     }
     async function sendOptionsButtons(to, title, options, footerText) {
         const list = Array.isArray(options) ? options.filter((o) => o && o.id && o.label) : [];
@@ -2663,7 +2681,18 @@ export function createEllbot(deps) {
                     },
                 },
             }, { userJid: deps.sock.user?.id });
-            await deps.withTimeout(deps.sock.relayMessage(to, msg.message, { messageId: msg.key?.id }), 25_000, "Options relay timed out.");
+            try {
+                await deps.withTimeout(deps.sock.relayMessage(to, msg.message, { messageId: msg.key?.id }), 25_000, "Options relay timed out.");
+            }
+            catch (e) {
+                const labels = chunk.map((o, idx) => `${idx + 1}) ${(o.label ?? "").toString().trim().slice(0, 40)}`).join("\n");
+                const fallback = `${body.slice(0, 1024)}\n\n${labels}`.trim().slice(0, 1600);
+                try {
+                    await deps.withTimeout(deps.sock.sendMessage(to, { text: fallback }), 25_000, "Send timed out.");
+                }
+                catch {
+                }
+            }
             await new Promise((r) => setTimeout(r, 600));
         }
     }
@@ -3255,15 +3284,6 @@ export function createEllbot(deps) {
         let text = (rawText ?? "").trim();
         if (!text)
             return;
-        // #region debug-point B:dm-entry
-        __dbg({
-            runId: "post",
-            hypothesisId: "B",
-            location: "ellbot.ts:handleDm:entry",
-            msg: "[DEBUG] dm entry",
-            data: { vendorId: deps.vendorId, to, upper: text.toUpperCase().trim().slice(0, 32), pid: process.pid },
-        });
-        // #endregion
         await ensureSessionsLoaded();
         if (!userSessions[to])
             userSessions[to] = { state: "chat", cart: null, greetedAt: 0, lastNudgeAt: 0, lastNudgeSig: "" };
@@ -3374,22 +3394,6 @@ export function createEllbot(deps) {
             }
         }
         const vendorCfg = await fetchVendorBotConfig(deps.vendorId);
-        // #region debug-point C:cfg-snapshot
-        __dbg({
-            runId: "post",
-            hypothesisId: "C",
-            location: "ellbot.ts:handleDm:vendorCfg",
-            msg: "[DEBUG] vendor config snapshot",
-            data: {
-                vendorId: deps.vendorId,
-                to,
-                sessionBotPaused: Boolean(session.botPaused),
-                handoffPauseBot: Boolean(vendorCfg?.whatsappHandoffSettings?.pauseBot),
-                takeoverAll: Boolean(vendorCfg?.whatsappTakeoverAll),
-                takeoverPeersCount: Array.isArray(vendorCfg?.whatsappTakeoverPeers) ? vendorCfg.whatsappTakeoverPeers.length : null,
-            },
-        });
-        // #endregion
         if (isExcludedPeer(to, vendorCfg?.whatsappExcludedPeers))
             return;
         const takeoverAll = Boolean(vendorCfg?.whatsappTakeoverAll);
@@ -3408,15 +3412,6 @@ export function createEllbot(deps) {
             .filter((x) => x));
         const pausedByTakeover = takeoverAll || takeoverSet.has(peerKey(to));
         if (pausedByTakeover) {
-            // #region debug-point E:takeover-paused
-            __dbg({
-                runId: "post",
-                hypothesisId: "E",
-                location: "ellbot.ts:handleDm:takeover",
-                msg: "[DEBUG] blocked by takeover pause",
-                data: { vendorId: deps.vendorId, to, takeoverAll, takeoverPeersCount: takeoverSet.size },
-            });
-            // #endregion
             return;
         }
         const brain = vendorCfg?.whatsappBotBrain;
@@ -3435,15 +3430,6 @@ export function createEllbot(deps) {
         const allowPriceSort = typeof catalogCfg?.allowPriceSort === "boolean" ? catalogCfg.allowPriceSort : true;
         const allowLatest = typeof catalogCfg?.allowLatest === "boolean" ? catalogCfg.allowLatest : true;
         if (session.botPaused) {
-            // #region debug-point D:paused-branch
-            __dbg({
-                runId: "post",
-                hypothesisId: "D",
-                location: "ellbot.ts:handleDm:paused",
-                msg: "[DEBUG] session.botPaused branch",
-                data: { vendorId: deps.vendorId, to, upperText },
-            });
-            // #endregion
             if (upperText === "RESUME_BOT") {
                 session.botPaused = false;
                 scheduleSave();
@@ -3639,6 +3625,242 @@ export function createEllbot(deps) {
                 }
                 return;
             }
+        }
+        if (session.state === "awaiting_request_confirm") {
+            const req = session.pendingRequest ?? null;
+            const yes = upperText === "REQ_YES" || parseConfirmDecision(text) === "yes" || text.trim() === "1";
+            const no = upperText === "REQ_NO" || parseConfirmDecision(text) === "no" || text.trim() === "2";
+            if (!req || !req.query) {
+                session.pendingRequest = undefined;
+                session.state = "chat";
+                scheduleSave();
+                await sendWithMenu(to, session, "Tap Menu to browse.", storeName);
+                return;
+            }
+            if (no) {
+                session.pendingRequest = undefined;
+                session.state = "chat";
+                scheduleSave();
+                await sendWithMenu(to, session, "No problem. Tap Menu to browse.", storeName);
+                return;
+            }
+            if (!yes) {
+                await sendWithCancel(to, session, "Please use the buttons above.");
+                return;
+            }
+            const savedName = (session.customerName ?? "").trim() || (session.customerPushName ?? "").trim();
+            if (savedName && !looksLikeStoreName(savedName, storeName)) {
+                req.customer_name = savedName.slice(0, 120);
+                session.pendingRequest = req;
+                session.state = "awaiting_request_phone";
+                scheduleSave();
+                await sendChoiceCard(to, "Send your phone number for SMS updates (or tap Skip):", [{ label: "Skip", id: "REQ_SKIP_PHONE" }], storeName);
+                return;
+            }
+            session.state = "awaiting_request_name";
+            scheduleSave();
+            await sendChoiceCard(to, "Please type your full name (or tap Skip):", [{ label: "Skip", id: "REQ_SKIP_NAME" }], storeName);
+            return;
+        }
+        if (session.state === "awaiting_request_name") {
+            const req = session.pendingRequest ?? null;
+            if (!req || !req.query) {
+                session.pendingRequest = undefined;
+                session.state = "chat";
+                scheduleSave();
+                await sendWithMenu(to, session, "Tap Menu to browse.", storeName);
+                return;
+            }
+            const name = text.trim();
+            if (upperText === "REQ_SKIP_NAME" || /^skip$/i.test(name) || name === "-")
+                req.customer_name = null;
+            else if (name)
+                req.customer_name = name.slice(0, 120);
+            session.pendingRequest = req;
+            session.state = "awaiting_request_phone";
+            scheduleSave();
+            await sendChoiceCard(to, "Send your phone number for SMS updates (or tap Skip):", [{ label: "Skip", id: "REQ_SKIP_PHONE" }], storeName);
+            return;
+        }
+        if (session.state === "awaiting_request_phone") {
+            const req = session.pendingRequest ?? null;
+            if (!req || !req.query) {
+                session.pendingRequest = undefined;
+                session.state = "chat";
+                scheduleSave();
+                await sendWithMenu(to, session, "Tap Menu to browse.", storeName);
+                return;
+            }
+            const raw = text.trim();
+            if (upperText === "REQ_SKIP_PHONE" || /^skip$/i.test(raw) || raw === "-") {
+                req.customer_phone = null;
+            }
+            else {
+                const digits = raw.replace(/[^\d]/g, "");
+                if (digits.length < 8 || digits.length > 15) {
+                    await sendWithCancel(to, session, "❌ Invalid phone. Please send a valid number (or type SKIP):");
+                    return;
+                }
+                req.customer_phone = digits.slice(0, 32);
+            }
+            session.pendingRequest = req;
+            session.state = "awaiting_request_category";
+            scheduleSave();
+            await sendOptionsButtons(to, "Which category is it?", [
+                { label: "Phones", id: "REQ_CAT:Phones" },
+                { label: "Laptops", id: "REQ_CAT:Laptops" },
+                { label: "Networking", id: "REQ_CAT:Networking" },
+                { label: "Fashion", id: "REQ_CAT:Fashion" },
+                { label: "Other", id: "REQ_CAT:Other" },
+            ], storeName);
+            return;
+        }
+        if (session.state === "awaiting_request_category") {
+            const req = session.pendingRequest ?? null;
+            if (!req || !req.query) {
+                session.pendingRequest = undefined;
+                session.state = "chat";
+                scheduleSave();
+                await sendWithMenu(to, session, "Tap Menu to browse.", storeName);
+                return;
+            }
+            const c = upperText.startsWith("REQ_CAT:") ? text.slice("REQ_CAT:".length).trim() : text.trim();
+            req.category = c ? c.slice(0, 80) : null;
+            session.pendingRequest = req;
+            session.state = "awaiting_request_specs";
+            scheduleSave();
+            await sendChoiceCard(to, "Please describe exactly what you want (model/specs/size/color). Or tap Skip:", [{ label: "Skip", id: "REQ_SKIP_SPECS" }], storeName);
+            return;
+        }
+        if (session.state === "awaiting_request_specs") {
+            const req = session.pendingRequest ?? null;
+            if (!req || !req.query) {
+                session.pendingRequest = undefined;
+                session.state = "chat";
+                scheduleSave();
+                await sendWithMenu(to, session, "Tap Menu to browse.", storeName);
+                return;
+            }
+            const d = text.trim();
+            const extra = upperText === "REQ_SKIP_SPECS" || /^skip$/i.test(d) || d === "-" ? "" : d;
+            const base = `Requested item: ${req.query}`;
+            req.description = (extra ? `${base}\nDetails: ${extra}` : base).slice(0, 2000);
+            session.pendingRequest = req;
+            session.state = "awaiting_request_budget";
+            scheduleSave();
+            await sendChoiceCard(to, "What’s your budget? (example: GHS 1500) or tap Skip:", [{ label: "Skip", id: "REQ_SKIP_BUDGET" }], storeName);
+            return;
+        }
+        if (session.state === "awaiting_request_budget") {
+            const req = session.pendingRequest ?? null;
+            if (!req || !req.query) {
+                session.pendingRequest = undefined;
+                session.state = "chat";
+                scheduleSave();
+                await sendWithMenu(to, session, "Tap Menu to browse.", storeName);
+                return;
+            }
+            const raw = text.trim();
+            if (upperText === "REQ_SKIP_BUDGET" || /^skip$/i.test(raw) || raw === "-") {
+                req.budget_cents = null;
+                req.currency = null;
+            }
+            else {
+                const cur = (vendorCfg?.deliveryOptions?.currency ?? "GHS").trim().toUpperCase() || "GHS";
+                const parsed = parseBudgetText(raw, cur);
+                if (!parsed) {
+                    await sendWithCancel(to, session, "❌ I couldn’t read that budget. Example: GHS 1500 (or type SKIP):");
+                    return;
+                }
+                req.currency = parsed.currency;
+                req.budget_cents = parsed.cents;
+            }
+            session.pendingRequest = req;
+            session.state = "awaiting_request_quantity";
+            scheduleSave();
+            await sendChoiceCard(to, "Quantity needed?", [
+                { label: "1", id: "REQ_QTY:1" },
+                { label: "2", id: "REQ_QTY:2" },
+                { label: "Skip", id: "REQ_QTY:SKIP" },
+            ], storeName);
+            return;
+        }
+        if (session.state === "awaiting_request_quantity") {
+            const req = session.pendingRequest ?? null;
+            if (!req || !req.query) {
+                session.pendingRequest = undefined;
+                session.state = "chat";
+                scheduleSave();
+                await sendWithMenu(to, session, "Tap Menu to browse.", storeName);
+                return;
+            }
+            const raw = upperText.startsWith("REQ_QTY:") ? text.slice("REQ_QTY:".length).trim() : text.trim();
+            if (raw.toUpperCase() === "SKIP" || /^skip$/i.test(raw) || raw === "-") {
+                req.quantity = null;
+            }
+            else {
+                const n = Number(raw);
+                const qty = Number.isFinite(n) ? Math.floor(n) : NaN;
+                if (!Number.isFinite(qty) || qty < 1 || qty > 99) {
+                    await sendWithCancel(to, session, "❌ Invalid quantity. Please enter 1–99 (or type SKIP):");
+                    return;
+                }
+                req.quantity = qty;
+            }
+            session.pendingRequest = req;
+            session.state = "awaiting_request_urgency";
+            scheduleSave();
+            await sendChoiceCard(to, "How urgent is it?", [
+                { label: "Today", id: "REQ_URG:Today" },
+                { label: "This week", id: "REQ_URG:This week" },
+                { label: "Anytime", id: "REQ_URG:Anytime" },
+            ], storeName);
+            return;
+        }
+        if (session.state === "awaiting_request_urgency") {
+            const req = session.pendingRequest ?? null;
+            if (!req || !req.query) {
+                session.pendingRequest = undefined;
+                session.state = "chat";
+                scheduleSave();
+                await sendWithMenu(to, session, "Tap Menu to browse.", storeName);
+                return;
+            }
+            const raw = upperText.startsWith("REQ_URG:") ? text.slice("REQ_URG:".length).trim() : text.trim();
+            req.urgency = /^skip$/i.test(raw) || raw === "-" ? null : raw.slice(0, 60);
+            const payload = {
+                peer: to,
+                push_name: pn || undefined,
+                customer_name: req.customer_name ?? null,
+                customer_phone: req.customer_phone ?? null,
+                category: req.category ?? null,
+                description: req.description ?? null,
+                budget_cents: typeof req.budget_cents === "number" && Number.isFinite(req.budget_cents) ? Math.max(0, Math.floor(req.budget_cents)) : null,
+                currency: req.currency ?? null,
+                quantity: typeof req.quantity === "number" && Number.isFinite(req.quantity) ? Math.max(1, Math.min(99, Math.floor(req.quantity))) : null,
+                urgency: req.urgency ?? null,
+            };
+            session.pendingRequest = undefined;
+            session.state = "chat";
+            scheduleSave();
+            const resp = await createProductRequest(deps.vendorId, payload);
+            const id = resp && resp.ok ? resp.request_id : null;
+            if (!id) {
+                const st = resp && typeof resp.status === "number" ? resp.status : 0;
+                const msg = resp && typeof resp.message === "string" && resp.message.trim() ? resp.message.trim() : "";
+                if (st === 401) {
+                    await sendWithMenu(to, session, "❌ Request failed: bot authorization error.\nPlease tell admin to fix the bot secret configuration, then try again.\n\nTap Menu to browse.", storeName);
+                }
+                else if (st === 422) {
+                    await sendWithMenu(to, session, "❌ Request failed: missing/invalid request details.\nPlease try again.\n\nTap Menu to browse.", storeName);
+                }
+                else {
+                    await sendWithMenu(to, session, `❌ I couldn’t submit that request right now.${msg ? ` (${msg})` : ""}\nPlease try again later, or tap Menu to browse.`, storeName);
+                }
+                return;
+            }
+            await sendWithMenu(to, session, `✅ Request submitted.\nRequest ID: *${id}*\n\nTap Menu to browse.`, storeName);
+            return;
         }
         if (session.state === "awaiting_qty") {
             const raw = Number(text.trim());
@@ -4314,7 +4536,7 @@ export function createEllbot(deps) {
             }
             const hits = await smartSearch(q, deps.vendorId, products, {});
             if (!hits.length) {
-                await sendWithMenu(to, session, `I couldn't find an exact match for *${q}*. Tap Menu to browse.`, storeName);
+                await offerRequestFromNoMatches(to, session, q, storeName);
                 return;
             }
             const answer = buildPriceAnswer(hits, 4);

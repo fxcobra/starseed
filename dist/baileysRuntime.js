@@ -697,17 +697,25 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
         if (introParts.length) {
             firstId = (await sendGroupText(groupId, introParts.join("\n\n"))) ?? null;
         }
+        const dmUrlForProduct = (id) => {
+            return typeof id === "number" && Number.isFinite(id) ? `${waBase}?text=${encodeURIComponent(`${cmd} ${id}`)}` : waBase;
+        };
         const buildCtaButtons = (c) => {
-            if (Array.isArray(c.buttons) && c.buttons.length) {
-                return c.buttons.map((b) => ({ text: b.text, url: b.url }));
-            }
-            if (c.url) {
-                return [{ text: displayText, url: c.url }];
-            }
-            const dmUrl = typeof c.product_id === "number" && Number.isFinite(c.product_id)
-                ? `${waBase}?text=${encodeURIComponent(`${cmd} ${c.product_id}`)}`
-                : waBase;
-            return [{ text: displayText, url: dmUrl }];
+            const extras = Array.isArray(c.buttons) && c.buttons.length ? c.buttons.map((b) => ({ text: b.text, url: b.url })) : [];
+            const primary = typeof c.product_id === "number" && Number.isFinite(c.product_id)
+                ? { text: displayText, url: dmUrlForProduct(c.product_id) }
+                : (c.url ? { text: displayText, url: c.url } : { text: displayText, url: waBase });
+            const merged = [primary, ...extras];
+            const seen = new Set();
+            return merged
+                .filter((b) => b.text && b.url)
+                .filter((b) => {
+                if (seen.has(b.url))
+                    return false;
+                seen.add(b.url);
+                return true;
+            })
+                .slice(0, 24);
         };
         const chunks3 = (arr) => {
             const out = [];
@@ -769,8 +777,9 @@ export async function startBaileysRuntime(vendorId, sessionDir, handlers) {
                     fallbackParts.push(bodySafe);
                 if (footerSafe)
                     fallbackParts.push(footerSafe);
-                if (c.url)
-                    fallbackParts.push(c.url);
+                const fallbackUrl = typeof c.product_id === "number" && Number.isFinite(c.product_id) ? dmUrlForProduct(c.product_id) : (c.url ? c.url : "");
+                if (fallbackUrl)
+                    fallbackParts.push(fallbackUrl);
                 try {
                     const id = await sendGroupImage(groupId, c.image_url, fallbackParts.join("\n\n").trim());
                     if (!firstId && id)

@@ -16,7 +16,15 @@ type Session = {
     | "awaiting_email"
     | "reviewing_checkout"
     | "selecting_payment_method"
-    | "awaiting_momo_number";
+    | "awaiting_momo_number"
+    | "awaiting_request_confirm"
+    | "awaiting_request_name"
+    | "awaiting_request_phone"
+    | "awaiting_request_category"
+    | "awaiting_request_specs"
+    | "awaiting_request_budget"
+    | "awaiting_request_quantity"
+    | "awaiting_request_urgency";
   cart: CartItem | null;
   botPaused?: boolean;
   handoffToken?: string;
@@ -56,6 +64,17 @@ type Session = {
   };
   lastResultsMinPrice?: number;
   lastResultsCategory?: string;
+  pendingRequest?: {
+    query: string;
+    customer_name?: string | null;
+    customer_phone?: string | null;
+    category?: string | null;
+    description?: string | null;
+    budget_cents?: number | null;
+    currency?: string | null;
+    quantity?: number | null;
+    urgency?: string | null;
+  };
 };
 
 export type ProductVariation = {
@@ -490,6 +509,39 @@ async function createHandoff(
   const idRaw = (json as any)?.handoff_id;
   const id = typeof idRaw === "number" ? idRaw : Number(idRaw);
   return Number.isFinite(id) ? Math.floor(id) : null;
+}
+
+async function createProductRequest(
+  vendorId: string,
+  payload: {
+    peer: string;
+    push_name?: string;
+    customer_name?: string | null;
+    customer_phone?: string | null;
+    category?: string | null;
+    description?: string | null;
+    budget_cents?: number | null;
+    currency?: string | null;
+    quantity?: number | null;
+    urgency?: string | null;
+  }
+) {
+  const base = apiBase();
+  const secret = (process.env.BOT_SERVER_SECRET ?? "").trim();
+  const url = `${base}/internal/bot/product-requests/${encodeURIComponent(vendorId)}`;
+  const { ok, status, json } = await requestJson(url, "POST", payload, secret ? { "x-bot-secret": secret } : {}, 6_000).catch(() => ({
+    ok: false,
+    status: 0,
+    json: null as any,
+  }));
+  if (!ok || !json || typeof json !== "object") {
+    const msg = json && typeof (json as any)?.message === "string" ? String((json as any).message).trim().slice(0, 180) : null;
+    return { ok: false, status: typeof status === "number" ? status : 0, message: msg, request_id: null as number | null };
+  }
+  const idRaw = (json as any)?.request_id;
+  const id = typeof idRaw === "number" ? idRaw : Number(idRaw);
+  const rid = Number.isFinite(id) ? Math.floor(id) : null;
+  return { ok: true, status: typeof status === "number" ? status : 200, message: null as string | null, request_id: rid };
 }
 
 async function requestJson(url: string, method: "GET" | "POST", body: unknown, headers: Record<string, string>, timeoutMs: number) {
@@ -1665,6 +1717,59 @@ export function createEllbot(deps: EllbotDeps) {
     pushHistory(session, "out", text);
   }
 
+  function parseBudgetText(text: string, defaultCurrency: string) {
+    const raw = (text ?? "").trim();
+    if (!raw) return null;
+    const curMatch = raw.match(/\b(ghs|usd|eur|gbp|ngn|kes|zar|cad|aud|inr|cny|jpy)\b/i);
+    const sym = raw.match(/[€£$₦₵]/);
+    const currency =
+      (curMatch ? String(curMatch[1]).trim().toUpperCase() : "") ||
+      (sym && sym[0] === "₦"
+        ? "NGN"
+        : sym && sym[0] === "$"
+          ? "USD"
+          : sym && sym[0] === "€"
+            ? "EUR"
+            : sym && sym[0] === "£"
+              ? "GBP"
+              : sym && (sym[0] === "₵" || sym[0] === "GH₵")
+                ? "GHS"
+                : "") ||
+      (defaultCurrency ?? "GHS").trim().toUpperCase() ||
+      "GHS";
+
+    const m = raw.replace(/,/g, "").match(/(\d+(?:\.\d{1,2})?)/);
+    if (!m) return null;
+    const n = Number(m[1]);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    const cents = Math.round(n * 100);
+    return { currency, cents };
+  }
+
+  async function offerRequestFromNoMatches(to: string, session: Session, query: string, storeName: string) {
+    const q = (query ?? "").trim().slice(0, 220);
+    if (!q) {
+      await sendWithMenu(to, session, "I couldn't find any exact matches. Tap Menu to browse.", storeName);
+      pushHistory(session, "out", "I couldn't find any exact matches. Tap Menu to browse.");
+      return;
+    }
+    session.pendingRequest = { query: q };
+    session.state = "awaiting_request_confirm";
+    scheduleSave();
+    const body = `I couldn't find any exact matches for *${q}*.\n\nShould I request it for you?`;
+    await sendChoiceCard(
+      to,
+      body,
+      [
+        { label: "Request it", id: "REQ_YES" },
+        { label: "No", id: "REQ_NO" },
+        { label: "Menu", id: "SHOW_CATALOG" },
+      ],
+      storeName
+    );
+    pushHistory(session, "out", body);
+  }
+
   async function sendWithCancel(to: string, session: Session, text: string) {
     if (session.cart) {
       await sendChoiceCard(to, text, [{ label: "Cancel Order", id: "CANCEL_CHECKOUT" }], "EllTek");
@@ -2308,7 +2413,7 @@ export function createEllbot(deps: EllbotDeps) {
               await sendCatalogPage(args.to, args.session, args.products, 0);
               return;
             }
-            await sendMenuAndRemember(args.to, args.session, `I couldn't find any exact matches for *${planned.query}*. Tap Menu to browse.`, args.storeName);
+            await offerRequestFromNoMatches(args.to, args.session, planned.query, args.storeName);
             return;
           }
         }
@@ -2351,12 +2456,7 @@ export function createEllbot(deps: EllbotDeps) {
               await sendCatalogPage(args.to, args.session, args.products, 0);
               return;
             }
-            await sendMenuAndRemember(
-              args.to,
-              args.session,
-              `I'm sorry, I just checked the system and we don't have exactly what you're looking for right now.`,
-              args.storeName
-            );
+            await offerRequestFromNoMatches(args.to, args.session, queryToSearch, args.storeName);
             return;
           }
         }
@@ -2423,12 +2523,7 @@ export function createEllbot(deps: EllbotDeps) {
         return;
       }
 
-      await sendMenuAndRemember(
-        args.to,
-        args.session,
-        query ? `I couldn't find any exact matches for *${query}*. Tap Menu to browse.` : "Tap Menu to browse.",
-        args.storeName
-      );
+      await offerRequestFromNoMatches(args.to, args.session, query || brand || args.input, args.storeName);
       return;
     }
 
@@ -2922,7 +3017,19 @@ export function createEllbot(deps: EllbotDeps) {
       } as any,
       { userJid: (deps.sock as any).user?.id }
     );
-    await deps.withTimeout(deps.sock.relayMessage(to, (msg as any).message, { messageId: (msg as any).key?.id }), 25_000, "Choice relay timed out.");
+    try {
+      await deps.withTimeout(deps.sock.relayMessage(to, (msg as any).message, { messageId: (msg as any).key?.id }), 25_000, "Choice relay timed out.");
+    } catch (e) {
+      const lines = (Array.isArray(choices) ? choices : [])
+        .filter((c) => c && c.id && c.label)
+        .slice(0, 3)
+        .map((c, i) => `${i + 1}) ${(c.label ?? "").toString().trim()}`);
+      const fallback = `${(body ?? "").toString().trim()}\n\n${lines.join("\n")}`.trim().slice(0, 1600);
+      try {
+        await deps.withTimeout(deps.sock.sendMessage(to, { text: fallback } as any), 25_000, "Send timed out.");
+      } catch {
+      }
+    }
   }
 
   async function sendOptionsButtons(
@@ -2965,7 +3072,16 @@ export function createEllbot(deps: EllbotDeps) {
         } as any,
         { userJid: (deps.sock as any).user?.id }
       );
-      await deps.withTimeout(deps.sock.relayMessage(to, (msg as any).message, { messageId: (msg as any).key?.id }), 25_000, "Options relay timed out.");
+      try {
+        await deps.withTimeout(deps.sock.relayMessage(to, (msg as any).message, { messageId: (msg as any).key?.id }), 25_000, "Options relay timed out.");
+      } catch (e) {
+        const labels = chunk.map((o, idx) => `${idx + 1}) ${(o.label ?? "").toString().trim().slice(0, 40)}`).join("\n");
+        const fallback = `${body.slice(0, 1024)}\n\n${labels}`.trim().slice(0, 1600);
+        try {
+          await deps.withTimeout(deps.sock.sendMessage(to, { text: fallback } as any), 25_000, "Send timed out.");
+        } catch {
+        }
+      }
       await new Promise((r) => setTimeout(r, 600));
     }
   }
@@ -3975,6 +4091,268 @@ export function createEllbot(deps: EllbotDeps) {
       }
     }
 
+    if (session.state === "awaiting_request_confirm") {
+      const req = session.pendingRequest ?? null;
+      const yes = upperText === "REQ_YES" || parseConfirmDecision(text) === "yes" || text.trim() === "1";
+      const no = upperText === "REQ_NO" || parseConfirmDecision(text) === "no" || text.trim() === "2";
+      if (!req || !req.query) {
+        session.pendingRequest = undefined;
+        session.state = "chat";
+        scheduleSave();
+        await sendWithMenu(to, session, "Tap Menu to browse.", storeName);
+        return;
+      }
+      if (no) {
+        session.pendingRequest = undefined;
+        session.state = "chat";
+        scheduleSave();
+        await sendWithMenu(to, session, "No problem. Tap Menu to browse.", storeName);
+        return;
+      }
+      if (!yes) {
+        await sendWithCancel(to, session, "Please use the buttons above.");
+        return;
+      }
+      const savedName = (session.customerName ?? "").trim() || (session.customerPushName ?? "").trim();
+      if (savedName && !looksLikeStoreName(savedName, storeName)) {
+        req.customer_name = savedName.slice(0, 120);
+        session.pendingRequest = req;
+        session.state = "awaiting_request_phone";
+        scheduleSave();
+        await sendChoiceCard(to, "Send your phone number for SMS updates (or tap Skip):", [{ label: "Skip", id: "REQ_SKIP_PHONE" }], storeName);
+        return;
+      }
+      session.state = "awaiting_request_name";
+      scheduleSave();
+      await sendChoiceCard(to, "Please type your full name (or tap Skip):", [{ label: "Skip", id: "REQ_SKIP_NAME" }], storeName);
+      return;
+    }
+
+    if (session.state === "awaiting_request_name") {
+      const req = session.pendingRequest ?? null;
+      if (!req || !req.query) {
+        session.pendingRequest = undefined;
+        session.state = "chat";
+        scheduleSave();
+        await sendWithMenu(to, session, "Tap Menu to browse.", storeName);
+        return;
+      }
+      const name = text.trim();
+      if (upperText === "REQ_SKIP_NAME" || /^skip$/i.test(name) || name === "-") req.customer_name = null;
+      else if (name) req.customer_name = name.slice(0, 120);
+      session.pendingRequest = req;
+      session.state = "awaiting_request_phone";
+      scheduleSave();
+      await sendChoiceCard(to, "Send your phone number for SMS updates (or tap Skip):", [{ label: "Skip", id: "REQ_SKIP_PHONE" }], storeName);
+      return;
+    }
+
+    if (session.state === "awaiting_request_phone") {
+      const req = session.pendingRequest ?? null;
+      if (!req || !req.query) {
+        session.pendingRequest = undefined;
+        session.state = "chat";
+        scheduleSave();
+        await sendWithMenu(to, session, "Tap Menu to browse.", storeName);
+        return;
+      }
+      const raw = text.trim();
+      if (upperText === "REQ_SKIP_PHONE" || /^skip$/i.test(raw) || raw === "-") {
+        req.customer_phone = null;
+      } else {
+        const digits = raw.replace(/[^\d]/g, "");
+        if (digits.length < 8 || digits.length > 15) {
+          await sendWithCancel(to, session, "❌ Invalid phone. Please send a valid number (or type SKIP):");
+          return;
+        }
+        req.customer_phone = digits.slice(0, 32);
+      }
+      session.pendingRequest = req;
+      session.state = "awaiting_request_category";
+      scheduleSave();
+      await sendOptionsButtons(
+        to,
+        "Which category is it?",
+        [
+          { label: "Phones", id: "REQ_CAT:Phones" },
+          { label: "Laptops", id: "REQ_CAT:Laptops" },
+          { label: "Networking", id: "REQ_CAT:Networking" },
+          { label: "Fashion", id: "REQ_CAT:Fashion" },
+          { label: "Other", id: "REQ_CAT:Other" },
+        ],
+        storeName
+      );
+      return;
+    }
+
+    if (session.state === "awaiting_request_category") {
+      const req = session.pendingRequest ?? null;
+      if (!req || !req.query) {
+        session.pendingRequest = undefined;
+        session.state = "chat";
+        scheduleSave();
+        await sendWithMenu(to, session, "Tap Menu to browse.", storeName);
+        return;
+      }
+      const c = upperText.startsWith("REQ_CAT:") ? text.slice("REQ_CAT:".length).trim() : text.trim();
+      req.category = c ? c.slice(0, 80) : null;
+      session.pendingRequest = req;
+      session.state = "awaiting_request_specs";
+      scheduleSave();
+      await sendChoiceCard(
+        to,
+        "Please describe exactly what you want (model/specs/size/color). Or tap Skip:",
+        [{ label: "Skip", id: "REQ_SKIP_SPECS" }],
+        storeName
+      );
+      return;
+    }
+
+    if (session.state === "awaiting_request_specs") {
+      const req = session.pendingRequest ?? null;
+      if (!req || !req.query) {
+        session.pendingRequest = undefined;
+        session.state = "chat";
+        scheduleSave();
+        await sendWithMenu(to, session, "Tap Menu to browse.", storeName);
+        return;
+      }
+      const d = text.trim();
+      const extra = upperText === "REQ_SKIP_SPECS" || /^skip$/i.test(d) || d === "-" ? "" : d;
+      const base = `Requested item: ${req.query}`;
+      req.description = (extra ? `${base}\nDetails: ${extra}` : base).slice(0, 2000);
+      session.pendingRequest = req;
+      session.state = "awaiting_request_budget";
+      scheduleSave();
+      await sendChoiceCard(to, "What’s your budget? (example: GHS 1500) or tap Skip:", [{ label: "Skip", id: "REQ_SKIP_BUDGET" }], storeName);
+      return;
+    }
+
+    if (session.state === "awaiting_request_budget") {
+      const req = session.pendingRequest ?? null;
+      if (!req || !req.query) {
+        session.pendingRequest = undefined;
+        session.state = "chat";
+        scheduleSave();
+        await sendWithMenu(to, session, "Tap Menu to browse.", storeName);
+        return;
+      }
+      const raw = text.trim();
+      if (upperText === "REQ_SKIP_BUDGET" || /^skip$/i.test(raw) || raw === "-") {
+        req.budget_cents = null;
+        req.currency = null;
+      } else {
+        const cur = (vendorCfg?.deliveryOptions?.currency ?? "GHS").trim().toUpperCase() || "GHS";
+        const parsed = parseBudgetText(raw, cur);
+        if (!parsed) {
+          await sendWithCancel(to, session, "❌ I couldn’t read that budget. Example: GHS 1500 (or type SKIP):");
+          return;
+        }
+        req.currency = parsed.currency;
+        req.budget_cents = parsed.cents;
+      }
+      session.pendingRequest = req;
+      session.state = "awaiting_request_quantity";
+      scheduleSave();
+      await sendChoiceCard(
+        to,
+        "Quantity needed?",
+        [
+          { label: "1", id: "REQ_QTY:1" },
+          { label: "2", id: "REQ_QTY:2" },
+          { label: "Skip", id: "REQ_QTY:SKIP" },
+        ],
+        storeName
+      );
+      return;
+    }
+
+    if (session.state === "awaiting_request_quantity") {
+      const req = session.pendingRequest ?? null;
+      if (!req || !req.query) {
+        session.pendingRequest = undefined;
+        session.state = "chat";
+        scheduleSave();
+        await sendWithMenu(to, session, "Tap Menu to browse.", storeName);
+        return;
+      }
+      const raw = upperText.startsWith("REQ_QTY:") ? text.slice("REQ_QTY:".length).trim() : text.trim();
+      if (raw.toUpperCase() === "SKIP" || /^skip$/i.test(raw) || raw === "-") {
+        req.quantity = null;
+      } else {
+        const n = Number(raw);
+        const qty = Number.isFinite(n) ? Math.floor(n) : NaN;
+        if (!Number.isFinite(qty) || qty < 1 || qty > 99) {
+          await sendWithCancel(to, session, "❌ Invalid quantity. Please enter 1–99 (or type SKIP):");
+          return;
+        }
+        req.quantity = qty;
+      }
+      session.pendingRequest = req;
+      session.state = "awaiting_request_urgency";
+      scheduleSave();
+      await sendChoiceCard(
+        to,
+        "How urgent is it?",
+        [
+          { label: "Today", id: "REQ_URG:Today" },
+          { label: "This week", id: "REQ_URG:This week" },
+          { label: "Anytime", id: "REQ_URG:Anytime" },
+        ],
+        storeName
+      );
+      return;
+    }
+
+    if (session.state === "awaiting_request_urgency") {
+      const req = session.pendingRequest ?? null;
+      if (!req || !req.query) {
+        session.pendingRequest = undefined;
+        session.state = "chat";
+        scheduleSave();
+        await sendWithMenu(to, session, "Tap Menu to browse.", storeName);
+        return;
+      }
+      const raw = upperText.startsWith("REQ_URG:") ? text.slice("REQ_URG:".length).trim() : text.trim();
+      req.urgency = /^skip$/i.test(raw) || raw === "-" ? null : raw.slice(0, 60);
+      const payload = {
+        peer: to,
+        push_name: pn || undefined,
+        customer_name: req.customer_name ?? null,
+        customer_phone: req.customer_phone ?? null,
+        category: req.category ?? null,
+        description: req.description ?? null,
+        budget_cents: typeof req.budget_cents === "number" && Number.isFinite(req.budget_cents) ? Math.max(0, Math.floor(req.budget_cents)) : null,
+        currency: req.currency ?? null,
+        quantity: typeof req.quantity === "number" && Number.isFinite(req.quantity) ? Math.max(1, Math.min(99, Math.floor(req.quantity))) : null,
+        urgency: req.urgency ?? null,
+      };
+      session.pendingRequest = undefined;
+      session.state = "chat";
+      scheduleSave();
+      const resp = await createProductRequest(deps.vendorId, payload);
+      const id = resp && resp.ok ? resp.request_id : null;
+      if (!id) {
+        const st = resp && typeof resp.status === "number" ? resp.status : 0;
+        const msg = resp && typeof resp.message === "string" && resp.message.trim() ? resp.message.trim() : "";
+        if (st === 401) {
+          await sendWithMenu(to, session, "❌ Request failed: bot authorization error.\nPlease tell admin to fix the bot secret configuration, then try again.\n\nTap Menu to browse.", storeName);
+        } else if (st === 422) {
+          await sendWithMenu(to, session, "❌ Request failed: missing/invalid request details.\nPlease try again.\n\nTap Menu to browse.", storeName);
+        } else {
+          await sendWithMenu(
+            to,
+            session,
+            `❌ I couldn’t submit that request right now.${msg ? ` (${msg})` : ""}\nPlease try again later, or tap Menu to browse.`,
+            storeName
+          );
+        }
+        return;
+      }
+      await sendWithMenu(to, session, `✅ Request submitted.\nRequest ID: *${id}*\n\nTap Menu to browse.`, storeName);
+      return;
+    }
+
     if (session.state === "awaiting_qty") {
       const raw = Number(text.trim());
       const qty = Number.isFinite(raw) ? Math.floor(raw) : NaN;
@@ -4682,7 +5060,7 @@ export function createEllbot(deps: EllbotDeps) {
       }
       const hits = await smartSearch(q, deps.vendorId, products, {});
       if (!hits.length) {
-        await sendWithMenu(to, session, `I couldn't find an exact match for *${q}*. Tap Menu to browse.`, storeName);
+        await offerRequestFromNoMatches(to, session, q, storeName);
         return;
       }
       const answer = buildPriceAnswer(hits, 4);

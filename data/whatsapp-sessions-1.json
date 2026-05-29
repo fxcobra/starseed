@@ -1,9 +1,9 @@
 {
   "v": 1,
-  "savedAt": 1779939778463,
+  "savedAt": 1780031717452,
   "sessions": {
     "271347544494286@lid": {
-      "lastAt": 1779939777994,
+      "lastAt": 1780031716250,
       "state": "chat",
       "email": "buzinezz1379@gmail.com",
       "momoNumber": "0551234987",
@@ -16,153 +16,153 @@
       "history": [
         {
           "dir": "in",
-          "text": "Hi 👋🏽",
-          "at": 1779939252177
+          "text": "REQ_SKIP_BUDGET",
+          "at": 1780030988398
         },
         {
           "dir": "in",
-          "text": "Nice 👍🏽",
-          "at": 1779939264220
-        },
-        {
-          "dir": "out",
-          "text": "Glad to hear that! How can I help you today?",
-          "at": 1779939269341
+          "text": "5",
+          "at": 1780030996664
         },
         {
           "dir": "in",
-          "text": "Hi 👋🏽",
-          "at": 1779939481518
-        },
-        {
-          "dir": "out",
-          "text": "I can help you find items quickly.\n\nTry: *Menu*  |  *under 500*  |  *phones*  |  *latest*",
-          "at": 1779939482555
+          "text": "REQ_URG:This week",
+          "at": 1780031001501
         },
         {
           "dir": "in",
-          "text": "I need a starlink Standard Mount",
-          "at": 1779939497702
+          "text": "?",
+          "at": 1780031028812
+        },
+        {
+          "dir": "in",
+          "text": "I want Xiaomi 13 Pro",
+          "at": 1780031265061
         },
         {
           "dir": "out",
-          "text": "I can check my system to see if we have a Starlink Standard Mount in stock! Would you like me to pull up the options for you?",
-          "at": 1779939504722
+          "text": "I can check my system to see if we have the Xiaomi 13 Pro in stock! Would you like me to pull up the options for you?",
+          "at": 1780031269527
         },
         {
           "dir": "in",
           "text": "Ok",
-          "at": 1779939508972
+          "at": 1780031276738
         },
         {
           "dir": "out",
-          "text": "I couldn't find any exact matches for *Starlink Standard Mount*. Tap Menu to browse.",
-          "at": 1779939519921
+          "text": "I couldn't find any exact matches for *Xiaomi 13 Pro*.\n\nShould I request it for you?",
+          "at": 1780031279780
         },
         {
           "dir": "in",
-          "text": "Sure?",
-          "at": 1779939528005
-        },
-        {
-          "dir": "out",
-          "text": "I'm sorry, I just checked the system and we don't have exactly what you're looking for right now.",
-          "at": 1779939535900
+          "text": "REQ_YES",
+          "at": 1780031283733
         },
         {
           "dir": "in",
-          "text": "I want a starlink Standard Mount",
-          "at": 1779939556051
+          "text": "Sammy",
+          "at": 1780031292598
+        },
+        {
+          "dir": "in",
+          "text": "0543328643",
+          "at": 1780031298231
+        },
+        {
+          "dir": "in",
+          "text": "REQ_CAT:Phones",
+          "at": 1780031302206
+        },
+        {
+          "dir": "in",
+          "text": "1TB",
+          "at": 1780031316869
+        },
+        {
+          "dir": "in",
+          "text": "REQ_SKIP_BUDGET",
+          "at": 1780031319741
+        },
+        {
+          "dir": "in",
+          "text": "REQ_QTY:2",
+          "at": 1780031323665
+        },
+        {
+          "dir": "in",
+          "text": "REQ_URG:Anytime",
+          "at": 1780031326934
+        },
+        {
+          "dir": "in",
+          "text": "I want a ladies Suit",
+          "at": 1780031637942
         },
         {
           "dir": "out",
-          "text": "I can check my system to see if we have a Starlink Standard Mount in stock! Would you like me to pull up the options for you?",
-          "at": 1779939563650
+          "text": "Could you please specify the style or size of the ladies' suit you're looking for?",
+          "at": 1780031642935
+        },
+        {
+          "dir": "in",
+          "text": "Any",
+          "at": 1780031663707
+        },
+        {
+          "dir": "out",
+          "text": "I can check my system to see if we have ladies' suits in stock! Would you like me to pull up the options for you?",
+          "at": 1780031667805
         },
         {
           "dir": "in",
           "text": "Ok",
-          "at": 1779939565999
+          "at": 1780031671227
         },
         {
           "dir": "out",
-          "text": "I couldn't find any exact matches for *Starlink Standard Mount*. Tap Menu to browse.",
-          "at": 1779939573336
+          "text": "I couldn't find any exact matches for *ladies suit*.\n\nShould I request it for you?",
+          "at": 1780031677135
         },
         {
           "dir": "in",
-          "text": "I want a starlink Standard Kit",
-          "at": 1779939586397
-        },
-        {
-          "dir": "out",
-          "text": "I can check my system to see if we have a Starlink Standard Kit in stock! Would you like me to pull up the options for you?",
-          "at": 1779939588429
+          "text": "REQ_YES",
+          "at": 1780031682531
         },
         {
           "dir": "in",
-          "text": "Arlt",
-          "at": 1779939595384
-        },
-        {
-          "dir": "out",
-          "text": "I couldn't find any exact matches for *Starlink Standard Kit*. Tap Menu to browse.",
-          "at": 1779939600379
+          "text": "Sam",
+          "at": 1780031689855
         },
         {
           "dir": "in",
-          "text": "SHOW_CATALOG",
-          "at": 1779939607777
+          "text": "+233539899784",
+          "at": 1780031697811
         },
         {
           "dir": "in",
-          "text": "MENU_CAT 1",
-          "at": 1779939611695
+          "text": "REQ_CAT:Fashion",
+          "at": 1780031701536
         },
         {
           "dir": "in",
-          "text": "MENU_CAT_PRODUCTS",
-          "at": 1779939614023
+          "text": "Blue",
+          "at": 1780031709042
         },
         {
           "dir": "in",
-          "text": "Let me me see what you have available",
-          "at": 1779939721749
-        },
-        {
-          "dir": "out",
-          "text": "I checked the system, here are the options we have!",
-          "at": 1779939728817
+          "text": "REQ_SKIP_BUDGET",
+          "at": 1780031711845
         },
         {
           "dir": "in",
-          "text": "I want a starlink Standard Mount",
-          "at": 1779939743081
-        },
-        {
-          "dir": "out",
-          "text": "I can check my system to see if we have a Starlink Standard Mount in stock! Would you like me to pull up the options for you?",
-          "at": 1779939748582
+          "text": "REQ_QTY:1",
+          "at": 1780031714215
         },
         {
           "dir": "in",
-          "text": "Ok",
-          "at": 1779939752061
-        },
-        {
-          "dir": "out",
-          "text": "I checked the system, here are the options we have!",
-          "at": 1779939759859
-        },
-        {
-          "dir": "in",
-          "text": "Ok",
-          "at": 1779939777258
-        },
-        {
-          "dir": "out",
-          "text": "I can help you find items quickly.\n\nTry: *Menu*  |  *under 500*  |  *phones*  |  *latest*",
-          "at": 1779939777994
+          "text": "REQ_URG:This week",
+          "at": 1780031716250
         }
       ],
       "lastProductTopic": "Starlink Standard Mount",
@@ -170,23 +170,13 @@
       "lastResultsCategory": "Phones"
     },
     "120363159552753674@newsletter": {
-      "lastAt": 1779788438991,
+      "lastAt": 1779957570537,
       "state": "chat",
       "greetedAt": 0,
       "lastNudgeAt": 0,
       "lastNudgeSig": "",
       "aiFallbackAt": 1779650718312,
       "history": [
-        {
-          "dir": "in",
-          "text": "🔥⚽🔛",
-          "at": 1779360841477
-        },
-        {
-          "dir": "out",
-          "text": "Exciting times for Juvenil A! How can I assist you today? Are you looking for any specific products or services related to this match or Real Madrid?",
-          "at": 1779360856059
-        },
         {
           "dir": "in",
           "text": "🤍 Become Madridista Platinum and enjoy the exclusive opportunity to customise the new 26/27 season jersey* before anyone else.\n🔗 https://bit.ly/realmadrid-signin\n-\n🌟 Hazte Madridista Platinum y disfruta del privilegio de personalizar la nueva camiseta de la temporada 26/27* antes que nadie.\n🔗 https://bit.ly/madrid-sign-in",
@@ -326,6 +316,16 @@
           "dir": "out",
           "text": "What a milestone! If you want to celebrate with some Real Madrid gear or have any questions about products, feel free to ask!",
           "at": 1779788438991
+        },
+        {
+          "dir": "in",
+          "text": "🔙 68 years since the third European Cup!\n👏 ¡68 años de la tercera Copa de Europa!",
+          "at": 1779957558921
+        },
+        {
+          "dir": "out",
+          "text": "That's a significant anniversary! If you're interested in commemorating it with some merchandise or have any specific requests, just let me know!",
+          "at": 1779957570537
         }
       ]
     },
@@ -798,166 +798,6 @@
           "at": 1779561399449
         }
       ]
-    },
-    "91702366879842@lid": {
-      "lastAt": 1779385565869,
-      "state": "chat",
-      "greetedAt": 1779380381239,
-      "lastNudgeAt": 0,
-      "lastNudgeSig": "",
-      "history": [
-        {
-          "dir": "in",
-          "text": "Yeah",
-          "at": 1779381545292
-        },
-        {
-          "dir": "out",
-          "text": "How can I assist you today? If you're looking for something specific, just let me know!",
-          "at": 1779381554726
-        },
-        {
-          "dir": "in",
-          "text": "Let me check out the bot",
-          "at": 1779381574411
-        },
-        {
-          "dir": "out",
-          "text": "Feel free to explore! If you have any questions or need assistance with anything, just let me know.",
-          "at": 1779381577691
-        },
-        {
-          "dir": "in",
-          "text": "Wow",
-          "at": 1779381610472
-        },
-        {
-          "dir": "out",
-          "text": "I'm glad you're impressed! If you have any questions or need help with something, just ask!",
-          "at": 1779381614462
-        },
-        {
-          "dir": "in",
-          "text": "Nice but my bot is dead",
-          "at": 1779381633707
-        },
-        {
-          "dir": "out",
-          "text": "I'm here to help! If you have any questions or need assistance with your bot or anything else, just let me know!",
-          "at": 1779381637839
-        },
-        {
-          "dir": "in",
-          "text": "I no longer do bots again",
-          "at": 1779381644966
-        },
-        {
-          "dir": "out",
-          "text": "That's completely fine! If there's something else you'd like to chat about or if you need assistance with anything else, feel free to share!",
-          "at": 1779381647017
-        },
-        {
-          "dir": "in",
-          "text": "Ok",
-          "at": 1779381682364
-        },
-        {
-          "dir": "out",
-          "text": "How can I assist you with bots today?",
-          "at": 1779381688047
-        },
-        {
-          "dir": "in",
-          "text": "Because my server got suspended and deleted",
-          "at": 1779383068619
-        },
-        {
-          "dir": "in",
-          "text": "I hosted my bot to make it 24/7 online",
-          "at": 1779383069098
-        },
-        {
-          "dir": "in",
-          "text": "So it got suspended",
-          "at": 1779383069098
-        },
-        {
-          "dir": "out",
-          "text": "I'm sorry to hear that! Server issues can be really frustrating. If you need any advice on alternatives or solutions, feel free to ask!",
-          "at": 1779383074767
-        },
-        {
-          "dir": "out",
-          "text": "I'm sorry to hear that! It can be frustrating when hosting issues arise. If you need advice on alternatives or how to get back online, feel free to ask!",
-          "at": 1779383074830
-        },
-        {
-          "dir": "out",
-          "text": "I'm sorry to hear that! If you're looking for alternatives or need advice on hosting options, I can help with that. Just let me know!",
-          "at": 1779383074852
-        },
-        {
-          "dir": "in",
-          "text": "lunse.host",
-          "at": 1779383483547
-        },
-        {
-          "dir": "out",
-          "text": "It seems like you're mentioning a hosting service. If you have questions about it or need assistance with something specific, feel free to share!",
-          "at": 1779383489875
-        },
-        {
-          "dir": "in",
-          "text": "I think it will be good for you",
-          "at": 1779383494281
-        },
-        {
-          "dir": "out",
-          "text": "Thanks for the suggestion! If you have any specific questions or need assistance with hosting or anything else, just let me know!",
-          "at": 1779383495400
-        },
-        {
-          "dir": "in",
-          "text": "Ok",
-          "at": 1779385437963
-        },
-        {
-          "dir": "out",
-          "text": "I'm sorry, I just checked the system and we don't have exactly what you're looking for right now.",
-          "at": 1779385448868
-        },
-        {
-          "dir": "in",
-          "text": "VIEW_PRODUCT 1076",
-          "at": 1779385497179
-        },
-        {
-          "dir": "in",
-          "text": "SELECT_VARIATION 1076 1078",
-          "at": 1779385530329
-        },
-        {
-          "dir": "in",
-          "text": "BUY_VAR 1076 1078",
-          "at": 1779385538340
-        },
-        {
-          "dir": "out",
-          "text": "I’ve handed this chat over to an assistant.",
-          "at": 1779385540086
-        },
-        {
-          "dir": "in",
-          "text": "RESUME_BOT",
-          "at": 1779385547492
-        },
-        {
-          "dir": "in",
-          "text": "SHOW_CATALOG",
-          "at": 1779385565869
-        }
-      ],
-      "lastProductTopic": "bot"
     }
   }
 }
