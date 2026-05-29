@@ -473,21 +473,19 @@ app.post("/vendors/:vendorId/messages", async (req, res) => {
           text: typeof (b as any).text === "string" ? (b as any).text : "",
         }))
         .filter((b) => b.id && b.text);
-      const resp = await sendVendorButtons(vendorId, to, text, list);
-      if (!resp.ok) {
-        res.status(503).json(resp);
-        return;
-      }
-      res.json(resp);
+      console.log(`vendor ${vendorId}: queued buttons to=${to}`);
+      void sendVendorButtons(vendorId, to, text, list)
+        .then((r) => console.log(`vendor ${vendorId}: buttons result ${JSON.stringify(r)}`))
+        .catch((e) => console.log(`vendor ${vendorId}: buttons error ${(e as any)?.message ?? String(e)}`));
+      res.status(202).json({ ok: true, queued: true });
       return;
     }
 
-    const resp = await sendVendorMessage(vendorId, to, text);
-    if (!resp.ok) {
-      res.status(503).json(resp);
-      return;
-    }
-    res.json(resp);
+    console.log(`vendor ${vendorId}: queued text to=${to}`);
+    void sendVendorMessage(vendorId, to, text)
+      .then((r) => console.log(`vendor ${vendorId}: text result ${JSON.stringify(r)}`))
+      .catch((e) => console.log(`vendor ${vendorId}: text error ${(e as any)?.message ?? String(e)}`));
+    res.status(202).json({ ok: true, queued: true });
   } catch (e: unknown) {
     res.status(503).json({ message: e instanceof Error ? e.message : "Send failed." });
   }
