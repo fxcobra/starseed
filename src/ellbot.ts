@@ -2866,7 +2866,7 @@ export function createEllbot(deps: EllbotDeps) {
     await sendWithCancel(to, session, "Please type your full name:");
   }
 
-  async function initiateMarketplaceCheckout(to: string, session: Session) {
+  async function initiateMarketplaceCheckout(to: string, session: Session, storeName: string) {
     const store = await fetchStoreSlug(deps.vendorId);
     if (!store || !store.slug) throw new Error("Store not found.");
     if (!session.cart) throw new Error("Cart is empty.");
@@ -2921,7 +2921,7 @@ export function createEllbot(deps: EllbotDeps) {
         { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
         { label: "Menu", id: "SHOW_CATALOG" },
       ],
-      "EllTek"
+      storeName
     );
   }
 
@@ -4766,7 +4766,7 @@ export function createEllbot(deps: EllbotDeps) {
         return;
       }
       try {
-        await initiateMarketplaceCheckout(to, session);
+        await initiateMarketplaceCheckout(to, session, storeName);
       } catch (e: unknown) {
         await sendText(to, "❌ Checkout failed. Please try again.");
         deps.onError(e instanceof Error ? e.message : "Pay link failed.");
