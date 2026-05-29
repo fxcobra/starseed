@@ -4051,12 +4051,16 @@ export function createEllbot(deps: EllbotDeps) {
       return;
     }
 
-    if (upperText.startsWith("PAID") || upperText === "CONFIRM_PAID") {
-      const refFromText = upperText.startsWith("PAID") ? text.replace(/^paid\s*/i, "").trim() : "";
-      const ref = refFromText || (session.lastReference ?? "").trim();
+    if (upperText.startsWith("PAID")) {
+      await sendWithCancel(to, session, "Please tap *I've Paid* using the button above.");
+      return;
+    }
+
+    if (upperText === "CONFIRM_PAID") {
+      const ref = (session.lastReference ?? "").trim();
       const email = (session.email ?? "").trim();
       if (!ref) {
-        await sendText(to, "Please reply with your reference like: *PAID PSK_...*");
+        await sendWithCancel(to, session, "I don’t have your payment reference yet. Please restart checkout from Menu to generate a new payment link.");
         return;
       }
       if (!email) {
