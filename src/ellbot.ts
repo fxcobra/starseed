@@ -2861,15 +2861,16 @@ export function createEllbot(deps: EllbotDeps) {
     const feeCents = typeof session.deliveryFeeCents === "number" && Number.isFinite(session.deliveryFeeCents) ? Math.max(0, Math.round(session.deliveryFeeCents)) : 0;
     const deliveryFee = feeCents / 100;
     const total = subtotal + deliveryFee;
-    await sendText(
+    await sendChoiceCard(
       to,
-      `🔗 *Payment Link Generated*\n\nOrder: ${session.cart.title}\nQty: ${qty}\nSubtotal: ${formatMoney(session.cart.product.currency, subtotal)}\n${feeCents ? `Delivery: ${formatMoney(session.cart.product.currency, deliveryFee)}\n` : ""}Total: ${formatMoney(session.cart.product.currency, total)}\nRef: ${reference || "N/A"}\n\nPay here: ${authorizationUrl}\n\nAfter payment, reply: *PAID ${reference || ""}*`
+      `🔗 *Payment Link Generated*\n\nOrder: ${session.cart.title}\nQty: ${qty}\nSubtotal: ${formatMoney(session.cart.product.currency, subtotal)}\n${feeCents ? `Delivery: ${formatMoney(session.cart.product.currency, deliveryFee)}\n` : ""}Total: ${formatMoney(session.cart.product.currency, total)}\nRef: ${reference || "N/A"}\n\nPay here: ${authorizationUrl}\n\nAfter payment, tap *I've Paid* below.`,
+      [
+        { label: "I've Paid", id: "CONFIRM_PAID" },
+        { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
+        { label: "Menu", id: "SHOW_CATALOG" },
+      ],
+      "EllTek"
     );
-    session.cart = null;
-    session.deliveryMethodId = undefined;
-    session.deliveryMethodName = undefined;
-    session.deliveryFeeCents = undefined;
-    scheduleSave();
   }
 
   function placeholderUrl(label: string) {
@@ -4039,8 +4040,19 @@ export function createEllbot(deps: EllbotDeps) {
       return;
     }
 
-    if (upperText.startsWith("PAID")) {
-      const refFromText = text.replace(/^paid\s*/i, "").trim();
+    if (upperText === "ORDER_DONE") {
+      session.state = "chat";
+      session.cart = null;
+      session.deliveryMethodId = undefined;
+      session.deliveryMethodName = undefined;
+      session.deliveryFeeCents = undefined;
+      scheduleSave();
+      await sendWithMenu(to, session, `✅ Noted.\n\nTap Menu to continue.`, storeName);
+      return;
+    }
+
+    if (upperText.startsWith("PAID") || upperText === "CONFIRM_PAID") {
+      const refFromText = upperText.startsWith("PAID") ? text.replace(/^paid\s*/i, "").trim() : "";
       const ref = refFromText || (session.lastReference ?? "").trim();
       const email = (session.email ?? "").trim();
       if (!ref) {
@@ -4057,7 +4069,7 @@ export function createEllbot(deps: EllbotDeps) {
         const { ok, json } = await postJson(url, { email }, {}, 20_000);
         if (!ok) {
           const msg = typeof (json as any)?.message === "string" ? (json as any).message : "Payment verification failed.";
-          await sendText(to, `❌ ${msg}`);
+          await sendWithCancel(to, session, `❌ ${msg}\n\nIf you’ve already paid, tap *I've Paid* again in a minute.`);
           return;
         }
         const status = typeof (json as any)?.order?.status === "string" ? String((json as any).order.status) : "updated";
@@ -4716,15 +4728,16 @@ export function createEllbot(deps: EllbotDeps) {
         const reference = typeof (json as any)?.reference === "string" ? String((json as any).reference).trim() : "";
         if (reference) session.lastReference = reference;
         const display = typeof (json as any)?.display_text === "string" ? String((json as any).display_text).trim() : "";
-        await sendText(
+        await sendChoiceCard(
           to,
-          `✅ Payment request sent to your phone.\nRef: ${reference || "N/A"}${display ? `\n\n${display}` : ""}\n\nAfter authorization, reply: *PAID ${reference || ""}*`
+          `✅ Payment request sent to your phone.\nRef: ${reference || "N/A"}${display ? `\n\n${display}` : ""}\n\nAfter authorization, tap *I've Paid* below.`,
+          [
+            { label: "I've Paid", id: "CONFIRM_PAID" },
+            { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
+            { label: "Menu", id: "SHOW_CATALOG" },
+          ],
+          storeName
         );
-        session.cart = null;
-        session.deliveryMethodId = undefined;
-        session.deliveryMethodName = undefined;
-        session.deliveryFeeCents = undefined;
-        scheduleSave();
       } catch (e: unknown) {
         deps.onError(e instanceof Error ? e.message : "MoMo charge failed.");
         const canPaystack = Boolean(vendorCfg?.payments?.paystack?.configured);
@@ -4780,15 +4793,16 @@ export function createEllbot(deps: EllbotDeps) {
       const method = typeof session.deliveryMethodName === "string" && session.deliveryMethodName.trim() ? session.deliveryMethodName.trim() : "";
       if (mp?.enabled && (mp.instructions ?? "").trim()) {
         const title = (mp.title ?? "Manual payment").trim() || "Manual payment";
-        await sendText(
+        await sendChoiceCard(
           to,
-          `📌 *${title}*\n\n${mp.instructions.trim()}\n\nItem: *${session.cart?.title ?? "your item"}*\nQty: ${qty}\nTotal: ${session.cart ? formatMoney(session.cart.product.currency, total) : "N/A"}`
+          `📌 *${title}*\n\n${mp.instructions.trim()}\n\nItem: *${session.cart?.title ?? "your item"}*\nQty: ${qty}\nTotal: ${session.cart ? formatMoney(session.cart.product.currency, total) : "N/A"}\n\nWhen done, tap *Done* below.`,
+          [
+            { label: "Done", id: "ORDER_DONE" },
+            { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
+            { label: "Menu", id: "SHOW_CATALOG" },
+          ],
+          storeName
         );
-        session.cart = null;
-        session.deliveryMethodId = undefined;
-        session.deliveryMethodName = undefined;
-        session.deliveryFeeCents = undefined;
-        scheduleSave();
         return;
       }
       const shopPhone = (process.env.SHOP_PHONE_NUMBER ?? "233000000000").trim() || "233000000000";
@@ -4796,11 +4810,16 @@ export function createEllbot(deps: EllbotDeps) {
         to,
         `📞 Please call our shop at *${shopPhone}* to complete your order for *${session.cart?.title ?? "your item"}*.\nQty: ${qty}\nSubtotal: ${session.cart ? formatMoney(session.cart.product.currency, subtotal) : "N/A"}\n${feeCents ? `Delivery: ${session.cart ? formatMoney(session.cart.product.currency, deliveryFee) : ""}${method ? ` (${method})` : ""}\n` : ""}Total: ${session.cart ? formatMoney(session.cart.product.currency, total) : "N/A"}`
       );
-      session.cart = null;
-      session.deliveryMethodId = undefined;
-      session.deliveryMethodName = undefined;
-      session.deliveryFeeCents = undefined;
-      scheduleSave();
+      await sendChoiceCard(
+        to,
+        "When you’re done, tap *Done* below (or cancel).",
+        [
+          { label: "Done", id: "ORDER_DONE" },
+          { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
+          { label: "Menu", id: "SHOW_CATALOG" },
+        ],
+        storeName
+      );
       return;
     }
 
