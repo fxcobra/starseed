@@ -16,7 +16,11 @@ type Session = {
     | "awaiting_email"
     | "reviewing_checkout"
     | "selecting_payment_method"
+    | "awaiting_momo_provider"
     | "awaiting_momo_number"
+    | "awaiting_momo_confirmation"
+    | "awaiting_momo_otp"
+    | "awaiting_momo_pin"
     | "awaiting_request_confirm"
     | "awaiting_request_name"
     | "awaiting_request_phone"
@@ -32,7 +36,9 @@ type Session = {
   customerPushName?: string;
   email?: string;
   momoNumber?: string;
+  momoProvider?: string;
   lastReference?: string;
+  paymentPoll?: { ref: string; startedAt: number; tries: number };
   greetedAt?: number;
   lastNudgeAt?: number;
   lastNudgeSig?: string;
@@ -109,6 +115,15 @@ type CartItem = {
   qty: number;
   image_url: string;
 };
+
+const paymentPollTimers = new Map<string, NodeJS.Timeout>();
+
+function normalizeGhanaPhone(raw: string): string {
+  const digits = raw.replace(/[^\d]/g, "");
+  if (digits.startsWith("233") && digits.length >= 11) return digits;
+  if (digits.startsWith("0") && digits.length === 10) return `233${digits.slice(1)}`;
+  return digits;
+}
 
 export type EllbotDeps = {
   vendorId: string;
@@ -606,6 +621,22 @@ async function fetchJson(url: string, timeoutMs: number) {
 
 async function postJson(url: string, body: unknown, headers: Record<string, string>, timeoutMs: number) {
   return await requestJson(url, "POST", body, headers, timeoutMs);
+}
+
+function clearCheckout(session: Session) {
+  session.cart = null;
+  session.deliveryMethodId = undefined;
+  session.deliveryMethodName = undefined;
+  session.deliveryFeeCents = undefined;
+  session.deliveryAddress = undefined;
+  session.momoNumber = undefined;
+  session.momoProvider = undefined;
+  session.paymentPoll = undefined;
+}
+
+async function verifyMarketplacePayment(reference: string, email: string) {
+  const url = `${apiBase()}/marketplace/orders/by-reference/${encodeURIComponent(reference)}/verify-payment`;
+  return await postJson(url, { email }, {}, 20_000).catch(() => ({ ok: false, status: 0, json: null as any }));
 }
 
 async function fetchStoreSlug(vendorId: string): Promise<StoreSlug> {
@@ -1511,7 +1542,9 @@ export function createEllbot(deps: EllbotDeps) {
           stateRaw === "awaiting_delivery_address" ||
           stateRaw === "awaiting_email" ||
           stateRaw === "selecting_payment_method" ||
+          stateRaw === "awaiting_momo_provider" ||
           stateRaw === "awaiting_momo_number" ||
+          stateRaw === "awaiting_momo_confirmation" ||
           stateRaw === "chat"
             ? stateRaw
             : "chat";
@@ -1529,6 +1562,7 @@ export function createEllbot(deps: EllbotDeps) {
           cart: null,
           email: typeof v.email === "string" ? v.email : undefined,
           momoNumber: typeof v.momoNumber === "string" ? v.momoNumber : undefined,
+          momoProvider: typeof v.momoProvider === "string" ? v.momoProvider : undefined,
           lastReference: typeof v.lastReference === "string" ? v.lastReference : undefined,
           greetedAt: typeof v.greetedAt === "number" && Number.isFinite(v.greetedAt) ? v.greetedAt : undefined,
           lastNudgeAt: typeof v.lastNudgeAt === "number" && Number.isFinite(v.lastNudgeAt) ? v.lastNudgeAt : undefined,
@@ -1577,6 +1611,7 @@ export function createEllbot(deps: EllbotDeps) {
           state: it.s.state,
           email: it.s.email,
           momoNumber: it.s.momoNumber,
+          momoProvider: it.s.momoProvider,
           lastReference: it.s.lastReference,
           greetedAt: it.s.greetedAt,
           lastNudgeAt: it.s.lastNudgeAt,
@@ -3036,6 +3071,63 @@ export function createEllbot(deps: EllbotDeps) {
       } catch {
       }
     }
+  }
+
+  function startMomoAutoVerify(to: string, session: Session, storeName: string) {
+    const ref = (session.lastReference ?? "").trim();
+    const email = (session.email ?? "").trim();
+    if (!ref || !email) return;
+
+    const existing = paymentPollTimers.get(to);
+    if (existing) {
+      try {
+        clearTimeout(existing);
+      } catch {
+        void 0;
+      }
+    }
+
+    if (!session.paymentPoll || session.paymentPoll.ref !== ref) {
+      session.paymentPoll = { ref, startedAt: Date.now(), tries: 0 };
+    }
+    scheduleSave();
+
+    const attempt = async () => {
+      const poll = session.paymentPoll;
+      if (!poll || poll.ref !== ref) return;
+      if (session.state !== "awaiting_momo_confirmation") return;
+      if (Date.now() - poll.startedAt > 120_000 || poll.tries >= 18) {
+        session.paymentPoll = undefined;
+        scheduleSave();
+        await sendChoiceCard(
+          to,
+          `⏳ Still waiting for payment confirmation.\n\nIf your network prompt is delayed or fails, please use the *Payment Link* option instead.\n\nDocs: https://paystack.com/docs/api/charge/`,
+          [
+            { label: "Payment Link", id: "PAY_LINK" },
+            { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
+            { label: "Menu", id: "SHOW_CATALOG" },
+          ],
+          storeName
+        );
+        return;
+      }
+      poll.tries += 1;
+      scheduleSave();
+      const { ok, json } = await verifyMarketplacePayment(ref, email);
+      if (ok) {
+        const status = typeof (json as any)?.order?.status === "string" ? String((json as any).order.status) : "processing";
+        session.state = "chat";
+        clearCheckout(session);
+        scheduleSave();
+        await sendWithMenu(to, session, `✅ Payment confirmed.\nStatus: ${status}\nRef: ${ref}\n\nTap Menu to continue.`, storeName);
+        return;
+      }
+      const t = setTimeout(() => void attempt(), 6500);
+      paymentPollTimers.set(to, t);
+    };
+
+    const t = setTimeout(() => void attempt(), 3500);
+    paymentPollTimers.set(to, t);
   }
 
   async function sendOptionsButtons(
@@ -4682,14 +4774,46 @@ export function createEllbot(deps: EllbotDeps) {
         await promptEmail(to, session, storeName);
         return;
       }
-      session.state = "awaiting_momo_number";
-      await sendText(to, "📲 Please enter your MoMo number (e.g., 054XXXXXXX):");
+      session.state = "awaiting_momo_provider";
+      scheduleSave();
+      await sendChoiceCard(
+        to,
+        "Select your Mobile Money network:",
+        [
+          { label: "MTN MoMo", id: "MOMO_PROVIDER_MTN" },
+          { label: "Telecel Cash", id: "MOMO_PROVIDER_VOD" },
+          { label: "AirtelTigo Money", id: "MOMO_PROVIDER_ATL" },
+        ],
+        storeName
+      );
       return;
+    }
+
+    if (session.state === "awaiting_momo_provider") {
+      if (upperText === "MOMO_PROVIDER_MTN" || upperText === "MOMO_PROVIDER_VOD" || upperText === "MOMO_PROVIDER_ATL") {
+        session.momoProvider = upperText === "MOMO_PROVIDER_VOD" ? "vod" : upperText === "MOMO_PROVIDER_ATL" ? "atl" : "mtn";
+        session.state = "awaiting_momo_number";
+        scheduleSave();
+        await sendText(to, "📲 Please enter your MoMo number (e.g., 054XXXXXXX):");
+        return;
+      }
+      await sendWithCancel(to, session, "Please use the buttons above to pick your network.");
+      return;
+    }
+
+    if (session.state === "awaiting_momo_confirmation") {
+      if (upperText === "CONFIRM_PAID" || upperText === "CANCEL_CHECKOUT" || upperText === "PAY_LINK" || upperText === "SHOW_CATALOG") {
+      } else {
+        startMomoAutoVerify(to, session, storeName);
+        await sendWithCancel(to, session, "⏳ Please complete the payment prompt on your phone. Then tap *I've Paid*.");
+        return;
+      }
     }
 
     if (session.state === "awaiting_momo_number") {
       session.momoNumber = text.trim();
-      session.state = "chat";
+      session.state = "awaiting_momo_confirmation";
+      scheduleSave();
       await sendText(
         to,
         `🔐 *SECURITY NOTE:* Your PIN is never saved or seen by ${storeName} or any 3rd party.\n\nPlease authorize the prompt on your phone and delete the OTP message immediately after.`
@@ -4702,13 +4826,13 @@ export function createEllbot(deps: EllbotDeps) {
         const name = (session.customerName ?? "").trim();
         const email = (session.email ?? "").trim();
         if (!email) throw new Error("Missing email.");
-        const momo = (session.momoNumber ?? "").trim();
+        const momo = normalizeGhanaPhone((session.momoNumber ?? "").trim());
         const body = {
           store_slug: store.slug,
           name: name || undefined,
           email,
           momo,
-          provider: "mtn",
+          provider: (session.momoProvider ?? "mtn").trim() || "mtn",
           shipping: {
             method: typeof session.deliveryMethodId === "string" && session.deliveryMethodId.trim() ? session.deliveryMethodId.trim() : undefined,
             fee_cents:
@@ -4732,11 +4856,14 @@ export function createEllbot(deps: EllbotDeps) {
         const reference = typeof (json as any)?.reference === "string" ? String((json as any).reference).trim() : "";
         if (reference) session.lastReference = reference;
         const display = typeof (json as any)?.display_text === "string" ? String((json as any).display_text).trim() : "";
+        const chargeStatus = typeof (json as any)?.charge_status === "string" ? String((json as any).charge_status).trim().toLowerCase() : "";
+        startMomoAutoVerify(to, session, storeName);
         await sendChoiceCard(
           to,
-          `✅ Payment request sent to your phone.\nRef: ${reference || "N/A"}${display ? `\n\n${display}` : ""}\n\nAfter authorization, tap *I've Paid* below.`,
+          `✅ Payment request sent to your phone.\nRef: ${reference || "N/A"}${display ? `\n\n${display}` : ""}\n\nStatus: ${chargeStatus || "pending"}\n\nAfter authorization, tap *I've Paid* below.\n\nIf it fails, use *Payment Link* instead.\nDocs: https://paystack.com/docs/api/charge/`,
           [
             { label: "I've Paid", id: "CONFIRM_PAID" },
+            { label: "Payment Link", id: "PAY_LINK" },
             { label: "Cancel Order", id: "CANCEL_CHECKOUT" },
             { label: "Menu", id: "SHOW_CATALOG" },
           ],
@@ -4749,7 +4876,7 @@ export function createEllbot(deps: EllbotDeps) {
           to,
           session,
           canPaystack
-            ? "❌ Direct MoMo charge failed. Please use the Paystack Link option instead (or tap Menu to browse)."
+            ? "❌ Direct MoMo charge failed. Please use the Paystack Link option instead.\nDocs: https://paystack.com/docs/api/charge/"
             : "❌ Direct MoMo charge failed. Please use Manual payment instead (or tap Menu to browse).",
           storeName
         );
