@@ -199,6 +199,29 @@ async function forwardInboundToApi(
   }
 }
 
+async function forwardBotStatusToApi(vendorId: string, status: string) {
+  const base = apiBase();
+  const secret = (process.env.BOT_SERVER_SECRET ?? "").trim();
+  if (!base) return;
+  try {
+    const url = `${base.replace(/\/$/, "")}/internal/bot/status/${encodeURIComponent(vendorId)}`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8_000);
+    await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(secret ? { "x-bot-secret": secret } : {}),
+      },
+      body: JSON.stringify({ status }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+  } catch {
+    void 0;
+  }
+}
+
 async function logMessageToApi(
   vendorId: string,
   payload: {
@@ -312,6 +335,7 @@ export function listRuntimes() {
 function emit(runtime: Runtime, event: VendorEvent) {
   if (event.type === "status") {
     runtime.status = event.status;
+    void forwardBotStatusToApi(runtime.vendorId, event.status);
     if (event.status === "connected") {
       const b = getBackoff(runtime.vendorId);
       b.restartAttempt = 0;

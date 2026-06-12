@@ -106,6 +106,30 @@ async function forwardInboundToApi(vendorId, payload) {
             process.stdout.write(`API inbound error: ${msg}\n`);
     }
 }
+async function forwardBotStatusToApi(vendorId, status) {
+    const base = apiBase();
+    const secret = (process.env.BOT_SERVER_SECRET ?? "").trim();
+    if (!base)
+        return;
+    try {
+        const url = `${base.replace(/\/$/, "")}/internal/bot/status/${encodeURIComponent(vendorId)}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8_000);
+        await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...(secret ? { "x-bot-secret": secret } : {}),
+            },
+            body: JSON.stringify({ status }),
+            signal: controller.signal,
+        });
+        clearTimeout(timeout);
+    }
+    catch {
+        void 0;
+    }
+}
 async function logMessageToApi(vendorId, payload) {
     const base = apiBase();
     const secret = (process.env.BOT_SERVER_SECRET ?? "").trim();
@@ -207,6 +231,7 @@ export function listRuntimes() {
 function emit(runtime, event) {
     if (event.type === "status") {
         runtime.status = event.status;
+        void forwardBotStatusToApi(runtime.vendorId, event.status);
         if (event.status === "connected") {
             const b = getBackoff(runtime.vendorId);
             b.restartAttempt = 0;
